@@ -1,0 +1,7 @@
+# compiled objects, computed dependency files
+*.a
+*.o
+*.d
+
+# vim swap files
+.*.sw[a-p]
