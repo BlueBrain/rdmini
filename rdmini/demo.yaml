@@ -1,0 +1,66 @@
+# Very simple R-D system specification:
+#
+# * Base units are SI: metre, kilogram, second, mole etc.
+# * One geometry specification, currently only a box grid is supported.
+# * One implicitly defined compartment, consisting of cells from the geometry.
+
+---
+model: schnakenberg
+
+geometry:
+    wmvol: 1.0e-6
+
+species:
+    name: A
+    diffusivity: 1.0e-11
+
+species:
+    name: B
+    diffusivity: 1.0e-9
+
+reaction:
+    left: [ A, A, B ]
+    right: [ A, A, A ]
+    rate: 4e-5
+
+reaction:
+    right: A
+    rate: [ 50, 10 ]
+
+reaction:
+    right: B
+    rate: 25
+
+...
+---
+model: turing
+
+geometry:
+    box: { extent: [ 1000, 1, 1 ], scale: 1.0e-6, cells: [40, 1, 1]  }
+
+species:
+    name: A
+    diffusivity: 1.0e-11
+
+species:
+    name: B
+    diffusivity: 1.0e-9
+
+reaction:
+    name: r1
+    left: [ A, A, B ]
+    right: [ A, A, A ]
+    rate: 1e-6
+
+reaction:
+    name: r2
+    right: A
+    rate: [ 1, 0.02 ]
+
+reaction:
+    name: r3
+    right: B
+    rate: 3
+
+...
+
