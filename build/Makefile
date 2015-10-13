@@ -1,21 +1,30 @@
 # global flags
 
-BUILD_YAML:=1
+BUILD_YAML := 1
+COMPILER := gnu
 
 .PHONY: clean all realclean test bench
 .SECONDARY:
 
 # compiler flags
 
-# g++:
-CFLAGS = -g -O0
-CXXFLAGS = -std=c++11 -g -O0 -fopenmp
+ifeq "$(COMPILER)" "gnu"
+# gcc, g++
+CC = gcc
+CXX = g++
+CFLAGS = -g -O3
+CXXFLAGS = -std=c++11 -g -O3 -fopenmp
 CXXFLAGS += -MMD -MP  # auto-generate dependencies
-
-# pgc++:
-#CXXFLAGS = -std=c++11 -g -O3 -mp
-#CXXFLAGS += -MMD # auto-generate dependencies
-
+# pgc, pgc++
+else ifeq "$(COMPILER)" "pgi"
+CC = pgc
+CXX = pgc++
+CXXFLAGS = -std=c++11 -g -O3 -mp
+CXXFLAGS += -MMD # auto-generate dependencies
+else
+CC = __error__
+CXX = __error__
+endif
 
 # main targets
 
@@ -36,7 +45,7 @@ CPPFLAGS += -I$(top)
 
 # need to make libyaml ourselves?
 ifdef BUILD_YAML
-CPPFLAGS += -isystem $(YAML_DIR)/include
+CPPFLAGS += -I $(YAML_DIR)/include
 LDFLAGS += libyaml.a
 yaml_lib = libyaml.a
 
