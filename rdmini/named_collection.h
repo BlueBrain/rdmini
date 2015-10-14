@@ -46,7 +46,7 @@ struct named_collection {
     
     difference_type index(const key_type &n) const {
         auto j=keymap.find(n);
-        return j!=keymap.end()?j->second:-1;
+        return j!=keymap.end()?static_cast<difference_type>(j->second):-1;
     }
 
     iterator find(const key_type &n) const {
