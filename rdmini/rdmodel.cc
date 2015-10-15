@@ -7,7 +7,7 @@
 
 static std::ostream &emit_reaction_expr(std::ostream &O,const rd_model &M,const std::multiset<int> &x) {
     bool first=true;
-    if (x.empty()) return O << "Ø";
+    if (x.empty()) return O << u8"\u00d8"; // crayCC barfs on utf8 in source
 
     for (auto i=x.begin();i!=x.end();i=x.upper_bound(*i)) {
         if (!first) O << " + ";
