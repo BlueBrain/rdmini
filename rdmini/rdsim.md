@@ -83,13 +83,15 @@ As for an SSA selector, `Y::key_type` should likely be an unsigned integral type
 
 name | type | description
 -----|------|------------
-`Y::max_populations` | unsigned integral | maximum number of representable populations
+`Y::max_population_index` | unsigned integral | maximum population index
 `Y::max_process_order` | unsigned integral | maximum process order
 `Y::max_participants` | unsigned integral | maximum disrinct populations involved in a process
+`Y::max_count` | unsigned integral | maximum population count
 
 ## Methods
 
-`k` is of type `Y::key_type`, representing a process identifier. `b`,`e` form
+`k` is of type `Y::key_type`, representing a process identifier. `p` is an unsigned integral
+value referencing a population. `b`,`e` form
 an iterator range of process descriptions, where for iterators `i` in [`b`,`e`),
  * `i->left()` is a collection (multiset) of population indices (reactants)
  * `i->right()` is a collection (multiset) of population indices (products)
@@ -97,11 +99,13 @@ an iterator range of process descriptions, where for iterators `i` in [`b`,`e`),
 
 expression | return type | description
 -----------|-------------|------------
-`y.clear()` | | reset state, discarding all process information
+`y.clear()`   | | reset state, discarding all process information
 `y.init(b,e)` | | configure system with processes described by iterator interval [`b`,`e`)
+`y.size()  `  | | number of processes in system
+`y.apply(k)`  | `Y::keyset_type` | apply process `k` to state; return collection of processes whose propensities have been invalidated
 `y.zero_populations()` | | zero population counts, invalidating all propensities
 `y.propensity(k)` | `Y::value_type` | calculate propensity for process `k`
-`y.apply(k)` | `Y::keyset_type` | apply process `k` to state; return collection of processes whose propensities have been invalidated
+`y.count(p)`  | `Y::count_type` | population count for population `p`
 
-As for an SSA selector, `B::key_type` should likely be an unsigned integral type.
+As for an SSA selector, `Y::key_type` should likely be an unsigned integral type.
 

@@ -37,5 +37,11 @@ public:
 template <typename T,typename = typename std::iterator_traits<T>::iterator_category>
 inline iterspan<T> make_span(T b, T e) { return iterspan<T>(b,e); }
 
+template <typename C,typename = typename std::iterator_traits<typename C::iterator>::iterator_category>
+inline iterspan<typename C::iterator> make_span(C &c) { return iterspan<typename C::iterator>(c.begin(),c.end()); }
+
+template <typename C,typename = typename std::iterator_traits<typename C::const_iterator>::iterator_category>
+inline iterspan<typename C::const_iterator> make_span(const C &c) { return iterspan<typename C::const_iterator>(c.cbegin(),c.cend()); }
+
 #endif // ndef ITERSPAN_H_
 

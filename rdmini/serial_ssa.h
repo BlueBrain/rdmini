@@ -5,19 +5,126 @@
 #include <vector>
 #include <map>
 #include <stdexcept>
+#include <limits>
 
-#include "iterspan.h"
-#include "rdmodel.h"
+#include "rdmini/iterspan.h"
+#include "rdmini/rdmodel.h"
+#include "rdmini/ssa_common.h"
 
-static constexpr unsigned ssa_max_order=4;
-typedef double ssa_propensity_type;
-typedef ptrdiff_t ssa_count_type;
-typedef uint32_t kproc_index;
-typedef uint32_t pop_index;
+/** SSA process system that maintains process dependencies
+ * factored through populations, and computes propensities
+ * on demand from cached factors. */
 
-struct ssa_error: std::runtime_error {
-    ssa_error(const std::string &what_str): std::runtime_error(what_str) {}
+template <unsigned MaxOrder=3>
+struct procsys_pp {
+    typedef uint32_t key_type;
+    typedef double value_type;
+    typedef uint32_t count_type;
+    typedef const std::vector<key_type> &keyset_type;
+
+    static constexpr size_t max_process_order=MaxOrder;
+    static constexpr size_t max_population_index=std::numeric_limits<pop_index>::max()-1;
+    static constexpr size_t max_count=std::numeric_limits<count_type>::max();
+    static constexpr size_t max_participants=max_populations;
+
+    procsys_pp(): n_kproc(0) {}
+
+    template <typename In>
+    void init(In b,In e) {
+        clear();
+        while (b!=e) add_proc(*b++0;
+        zero_populations();
+    }
+
+    /** Remove all processes, population counts */
+    void clear() {
+        kproc_propensity_tbl.clear();
+        for (auto &entry: pop_contribs_tbl) entry.clear();
+    }
+
+    size_t size() const { return n_kproc; }
+    
+    /** Zero all population counts, reset propensity contributions */
+    void zero_populations() {
+        // init contribs and pop counts
+        pop_index n_pop=pop_count.size();
+        for (pop_index p=0; p<n_pop; ++p) {
+            pop_count[p]=0;
+            auto &pc_entry=pop_contrib_tbl[p];
+            if (pc_entry.empty()) continue;
+ 
+            // note that indices in pc are grouped by kproc id.
+            auto pc_i=pc.begin();
+            auto pc_end=pc.end();
+
+            count_type count=0;
+            key_type k=pc_iter->k;
+            proc_propensity_tbl[k].counts[pc_i->i]=count;
+            
+            while (++pc_i!=pc_end) {
+                if (pc_i->k==k) --count;
+                else count=0;
+
+                k=pc_iter->k;
+                kproc_propensity_tbl[k].counts[pc_iter->i]=count;
+            }
+        }
+    }
+
+private:
+    typedef uint32_t pop_index;
+
+    template <typename Proc>
+    void add_proc(const Proc &proc) {
+        if (n_kproc>=std::numeric_limits<key_type>::max())
+            throw ssa_error("process index out of bounds");
+
+        key_type key=n_kproc++;
+
+        proc_contrib_tbl.resize(key);
+        proc_contrib_tbl[ey].rate=proc.rate();
+
+        std::vector<pop_index> left_sorted;
+        std::map<pop_index,ssa_count_type> delta_map;
+        for (auto p: proc.left()) {
+            if (p>max_population_index) throw ssa_error("population index out of bounds");
+            --delta_map[p];
+            left_sorted.push_back(p);
+        }
+        for (auto p: proc.right()) {
+            if (p>max_population_index) throw ssa_error("population index out of bounds");
+            ++delta_map[p];
+        }
+
+        proc_delta_tbl.resize(k_id);
+        auto &kd_entry=proc_delta_tbl[k_id];
+        for (auto pd: delta_map) kd_entry.push_back({pd.first,pd.second});
+
+        std::sort(left_sorted.begin(),left_sorted.end());
+        uint32_t index=0;
+        for (auto p: left_sorted) {
+            if (p>=pop_contribs_tbl.size()) pop_contribs_tbl.resize(p+1);
+            pop_contribs_tbl[p].emplace_back({key,index++});
+        }
+    }
+
+    size_t n_kproc;
+
+    std::vector<count_type> pop_count;
+    
+    struct proc_contrib_index {
+        key_type k; // which process
+        uint32_t i; // which slot in rate contribs
+    };
+
+    typedef std::vector<kproc_contrib_index> pop_contrib_set;
+    std::vector<pop_contrib_set> pop_contrib_tbl;
 };
+
+
+#if 0
+
+
 
 /** Reaction or diffusion process info required for building
  * SSA data structures. */
@@ -38,37 +145,6 @@ struct kproc_system {
             add_kproc(ki);
 
         zero_pop_counts();
-    }
-
-    /** Zero all population counts, reset propensity contributions */
-    void zero_pop_counts() {
-        // init contribs and pop counts
-        for (pop_index p=0; p<n_pop; ++p) {
-            pop_count[p]=0;
-            auto &pc=pop_contribs_tbl[p];
-
-            // note that indices in pc are grouped by kproc id.
-            auto pc_iter=pc.begin(),pc_end=pc.end();
-            if (pc_iter==pc_end) continue;
-
-            ssa_count_type count=0;
-            kproc_index k=pc_iter->k_id;
-            kproc_propensity_tbl[k].counts[pc_iter->i]=count;
-            
-            while (++pc_iter!=pc_end) {
-                if (pc_iter->k_id==k) --count;
-                else count=0;
-
-                k=pc_iter->k_id;
-                kproc_propensity_tbl[k].counts[pc_iter->i]=count;
-            }
-        }
-    }
-
-    /** Remove all kprocs */
-    void clear() {
-        kproc_propensity_tbl.clear();
-        for (auto &entry: pop_contribs_tbl) entry.clear();
     }
 
     /** Retrieve population count */
@@ -218,9 +294,8 @@ struct ssa_direct_sampler {
 
 typedef ssa_direct_sampler kselector;
 
-typedef <typename RNG>
 struct serial_ssa {
-    explicit serial_ssa(RNG rng_): rng(rng_) {}
+    explicit serial_ssa(): rng(rng_) {}
 
     void set_seed(typename RNG::value_type v) { rng.set_seed(v); }
     template <typename Sseq>
@@ -308,8 +383,6 @@ struct serial_ssa {
 
         
 private:
-    RNG rng;
-
     size_t n_species;
     size_t n_reac;
     size_t n_cell;
@@ -328,6 +401,7 @@ private:
         return cell_id*n_species+species_id;
     }
 };
+#endif
 
 
 #endif // ndef  SERIAL_SSA_H_
