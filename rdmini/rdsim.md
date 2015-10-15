@@ -52,8 +52,8 @@ expression | return type | description
 `a.reset(n)` | | initialise state to represent `n` processes, with initially zero propensity
 `a.size()`   | unsigned integral type | Total number of represented processes
 `a.update(k,r)` | | set propensity of process `k` to `r`
-`a.next(g)` | A::event_type | generate next event drawing uniformly distributed numbers from `g`
-`ev.key()`  | A::key_type | identifier of process in event
+`a.next(g)` | `A::event_type` | generate next event drawing uniformly distributed numbers from `g`
+`ev.key()`  | `A::key_type` | identifier of process in event
 `ev.dt()`   | floating point type | event time delta
 
 In practice, `A::key_type` should probably be an unsigned integral type, taking
