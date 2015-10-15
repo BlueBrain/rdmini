@@ -2,6 +2,8 @@
 
 Any instance `s` of a simulator implementation `S` should provide the following interface to callers.
 
+An SSA implementation may be comprise an SSA selector and SSA process system, described below.
+
 ## Types
 
  name | type | description 
@@ -58,4 +60,48 @@ expression | return type | description
 
 In practice, `A::key_type` should probably be an unsigned integral type, taking
 values from the range [0, `a.size()`).
+
+
+# SSA process system implementation
+
+A process system encapsulates the dependency relations between populations and
+processes.
+
+For a process system of type `Y`, instance `y`.
+
+## Types
+
+name | type | description
+-----|------|------------
+`Y::key_type` | implementation specific | keys representing individual procesess
+`Y::value_type` | floating point type | represents process propensities
+`Y::keyset_type` | implementation specific | a collection (view) of keys
+
+As for an SSA selector, `Y::key_type` should likely be an unsigned integral type.
+
+## Constants
+
+name | type | description
+-----|------|------------
+`Y::max_populations` | unsigned integral | maximum number of representable populations
+`Y::max_process_order` | unsigned integral | maximum process order
+`Y::max_participants` | unsigned integral | maximum disrinct populations involved in a process
+
+## Methods
+
+`k` is of type `Y::key_type`, representing a process identifier. `b`,`e` form
+an iterator range of process descriptions, where for iterators `i` in [`b`,`e`),
+ * `i->left()` is a collection (multiset) of population indices (reactants)
+ * `i->right()` is a collection (multiset) of population indices (products)
+ * `i->rate()` is the elementary process rate (convertible to `Y::value_type`.)
+
+expression | return type | description
+-----------|-------------|------------
+`y.clear()` | | reset state, discarding all process information
+`y.init(b,e)` | | configure system with processes described by iterator interval [`b`,`e`)
+`y.zero_populations()` | | zero population counts, invalidating all propensities
+`y.propensity(k)` | `Y::value_type` | calculate propensity for process `k`
+`y.apply(k)` | `Y::keyset_type` | apply process `k` to state; return collection of processes whose propensities have been invalidated
+
+As for an SSA selector, `B::key_type` should likely be an unsigned integral type.
 
