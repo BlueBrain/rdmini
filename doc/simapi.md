@@ -75,7 +75,7 @@ name | type | description
 -----|------|------------
 `Y::key_type` | implementation specific | keys representing individual procesess
 `Y::value_type` | floating point type | represents process propensities
-`Y::keyset_type` | implementation specific | a collection (view) of keys
+`Y::count_type` | integral type | represents population counts
 
 As for an SSA selector, `Y::key_type` should likely be an unsigned integral type.
 
@@ -90,22 +90,27 @@ name | type | description
 
 ## Methods
 
-`k` is of type `Y::key_type`, representing a process identifier. `p` is an unsigned integral
-value referencing a population. `b`,`e` form
-an iterator range of process descriptions, where for iterators `i` in [`b`,`e`),
- * `i->left()` is a collection (multiset) of population indices (reactants)
- * `i->right()` is a collection (multiset) of population indices (products)
- * `i->rate()` is the elementary process rate (convertible to `Y::value_type`.)
+In the follwing,
+
+* `k` is of type `Y::key_type`, representing a process identifier.
+* `p` is an unsigned integral value referencing a population.
+* `c` is of type `Y::count_type`, representing a population count.
+* `b`,`e` form an iterator range of process descriptions, where for iterators `i` in [`b`,`e`),
+    * `i->left()` is a collection (multiset) of population indices (reactants)
+    * `i->right()` is a collection (multiset) of population indices (products)
+    * `i->rate()` is the elementary process rate (convertible to `Y::value_type`.)
+* `notify` is a function object with signature equivalent to `void notify(key_type)`.
 
 expression | return type | description
 -----------|-------------|------------
 `y.clear()`   | | reset state, discarding all process information
-`y.init(b,e)` | | configure system with processes described by iterator interval [`b`,`e`)
+`y.defing_processes(b,e)` | | configure system with processes described by iterator interval [`b`,`e`)
 `y.size()  `  | | number of processes in system
-`y.apply(k)`  | `Y::keyset_type` | apply process `k` to state; return collection of processes whose propensities have been invalidated
 `y.zero_populations()` | | zero population counts, invalidating all propensities
 `y.propensity(k)` | `Y::value_type` | calculate propensity for process `k`
 `y.count(p)`  | `Y::count_type` | population count for population `p`
+`y.apply(k,notify)`  | | apply process `k` to state; call `notify(j)` for each affected process.
+`y.set_count(p,c,notify)`  | | set count for population `p` to `c`; call `notify(j)` for each affected process.
 
 As for an SSA selector, `Y::key_type` should likely be an unsigned integral type.
 

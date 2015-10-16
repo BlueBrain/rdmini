@@ -3,7 +3,7 @@
 BUILD_YAML := 1
 COMPILER := gnu
 
-.PHONY: clean all realclean test bench depend
+.PHONY: clean all realclean test bench depend doc
 .SECONDARY:
 
 # compiler flags
@@ -36,6 +36,7 @@ endif
 demos := demo_parse demo_ssa_direct
 tests := test_dummy
 benches := 
+docs := simapi.html
 
 all: $(demos) $(tests) $(benches)
 
@@ -114,6 +115,13 @@ libgtestmain.a: obj/gtest-all.o obj/gtest_main.o
 	$(AR) $(ARFLAGS) $@ $^
 
 
+# docs
+
+doc: $(docs)
+
+%.html: $(top)/doc/%.md
+	pandoc -t html $^ -o $@
+
 # dependencies
 
 all_nonlib_sources := $(rdmini_sources) $(demo_sources) $(test_sources)
@@ -136,7 +144,7 @@ clean:
 	rm -f gtest-all.o gtest_main.o obj/*.o obj/yaml/*.o obj/*.d.bak
 
 realclean: clean
-	rm -f $(demos) $(tests) $(benches) libgtestmain.a libyaml.a obj/*.d obj/yaml/*.d
+	rm -f $(docs) $(demos) $(tests) $(benches) libgtestmain.a libyaml.a obj/*.d obj/yaml/*.d 
 	
 
 
