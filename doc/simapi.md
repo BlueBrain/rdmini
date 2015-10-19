@@ -14,7 +14,7 @@ An SSA implementation may be comprise an SSA selector and SSA process system, de
 
  name | type | description
 ------|------|-------------
-`S::max_order` | unsigned integral type | maximum order of an (elementary) reaction
+`S::max_process_order` | unsigned integral type | maximum order of an (elementary) reaction
 `S::max_participants` | unsigned integral type | maximum number of distinct populations affected by one reaction
 `S::dynamic_range` | unsigned intgral type | maximum (base 2) logarithm of ratios of propensities
 

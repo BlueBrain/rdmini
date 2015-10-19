@@ -6,6 +6,7 @@
 #include <map>
 #include <stdexcept>
 #include <limits>
+#include <algorithm>
 
 #include "rdmini/iterspan.h"
 #include "rdmini/rdmodel.h"
@@ -20,19 +21,22 @@ struct ssa_pp_procsys {
     typedef uint32_t key_type;
     typedef double value_type;
     typedef uint32_t count_type;
-    typedef const std::vector<key_type> &keyset_type;
 
+private:
+    typedef uint32_t pop_index;
+
+public:
     static constexpr size_t max_process_order=MaxOrder;
     static constexpr size_t max_population_index=std::numeric_limits<pop_index>::max()-1;
     static constexpr size_t max_count=std::numeric_limits<count_type>::max();
-    static constexpr size_t max_participants=max_populations;
+    static constexpr size_t max_participants=max_population_index;
 
     ssa_pp_procsys(): n_proc(0) {}
 
     template <typename In>
     void define_processes(In b,In e) {
         clear();
-        while (b!=e) add_proc(*b++0;
+        while (b!=e) add_proc(*b++);
         zero_populations();
     }
 
@@ -42,7 +46,7 @@ struct ssa_pp_procsys {
         for (auto &entry: pop_contribs_tbl) entry.clear();
     }
 
-    size_t size() const { return n_kproc; }
+    size_t size() const { return n_proc; }
     
     /** Zero all population counts, reset propensity contributions */
     void zero_populations() {
@@ -54,24 +58,24 @@ struct ssa_pp_procsys {
             if (pc_entry.empty()) continue;
  
             // note that indices in pc are grouped by kproc id.
-            auto pc_i=pc.begin();
-            auto pc_end=pc.end();
+            auto pc_i=pc_entry.begin();
+            auto pc_end=pc_entry.end();
 
             count_type count=0;
-            key_type k=pc_iter->k;
+            key_type k=pc_i->k;
             proc_propensity_tbl[k].counts[pc_i->i]=count;
             
             while (++pc_i!=pc_end) {
                 if (pc_i->k==k) --count;
                 else count=0;
 
-                k=pc_iter->k;
-                proc_propensity_tbl[k].counts[pc_iter->i]=count;
+                k=pc_i->k;
+                proc_propensity_tbl[k].counts[pc_i->i]=count;
             }
         }
     }
 
-    count_type count(size_t p) { return pop_count[p]; }
+    count_type count(size_t p) const { return pop_count[p]; }
 
     template <typename F>
     void set_count(size_t p,count_type c,F update_notify) {
@@ -84,8 +88,8 @@ struct ssa_pp_procsys {
     template <typename F>
     void apply(key_type k,F update_notify) {
         for (auto pd: proc_delta_tbl[k]) 
-            for (auto kci: pop_contribs_tbl[pd.p_id])
-                apply_contrib_udpate(kci,pd.delta,update_notify);
+            for (auto kci: pop_contribs_tbl[pd.p])
+                apply_contrib_update(kci,pd.delta,update_notify);
     }
 
     void apply(key_type k) { apply(k,[](key_type) {}); }
@@ -98,8 +102,6 @@ struct ssa_pp_procsys {
     }
 
 private:
-    typedef uint32_t pop_index;
-
     template <typename Proc>
     void add_proc(const Proc &proc) {
         if (n_proc>=std::numeric_limits<key_type>::max())
@@ -111,7 +113,7 @@ private:
         proc_propensity_tbl[key].rate=proc.rate();
 
         std::vector<pop_index> left_sorted;
-        std::map<pop_index,ssa_count_type> delta_map;
+        std::map<pop_index,count_type> delta_map;
         for (auto p: proc.left()) {
             if (p>max_population_index) throw ssa_error("population index out of bounds");
             --delta_map[p];
@@ -122,43 +124,54 @@ private:
             ++delta_map[p];
         }
 
-        proc_delta_tbl.resize(k_id);
-        auto &pd_entry=proc_delta_tbl[k_id];
+        proc_delta_tbl.resize(key);
+        auto &pd_entry=proc_delta_tbl[key];
         for (auto pd: delta_map) pd_entry.push_back({pd.first,pd.second});
 
         std::sort(left_sorted.begin(),left_sorted.end());
         uint32_t index=0;
         for (auto p: left_sorted) {
             if (p>=pop_contribs_tbl.size()) pop_contribs_tbl.resize(p+1);
-            pop_contribs_tbl[p].emplace_back({key,index++});
+            pop_contribs_tbl[p].emplace_back(key,index++);
         }
     }
 
+    // population to process rate factor map: constant per model
+    struct proc_contrib_index {
+        key_type k; // which process
+        uint32_t i; // which slot in rate contribs
+
+        proc_contrib_index(key_type k_,uint32_t i_): k(k_),i(i_) {}
+    };
+    typedef std::vector<proc_contrib_index> pop_contribs_entry;
+    std::vector<pop_contribs_entry> pop_contribs_tbl;
+
     template <typename F>
     void apply_contrib_update(proc_contrib_index kci,count_type delta,F notify) {
-        proc_contrib_tbl[kci.k_id].counts[kci.i]+=delta;
-        notify(kci.k_id);
+        proc_propensity_tbl[kci.k].counts[kci.i]+=delta;
+        notify(kci.k);
     }
 
     size_t n_proc;
 
     std::vector<count_type> pop_count;
     
-    struct proc_contrib_index {
-        key_type k; // which process
-        uint32_t i; // which slot in rate contribs
+    // process to population delta map: constant per model
+    struct proc_delta {
+        pop_index p; // which population
+        uint32_t delta; // delta to apply
     };
+    typedef std::vector<proc_delta> proc_delta_entry;
+    std::vector<proc_delta_entry> proc_delta_tbl;
 
-    typedef std::vector<proc_contrib_index> pop_contribs_entry;
-    std::vector<pop_contribs_entry> pop_contribs_tbl;
-
+    // process rate factor table: evolves over time
     struct proc_propensity_entry {
         value_type rate;
         std::array<count_type,max_process_order> counts;
 
         proc_propensity_entry(): rate(0) { counts.fill(1); }
     };
-    std::vector<prpc_propensity_entry> proc_propensity_tbl;
+    std::vector<proc_propensity_entry> proc_propensity_tbl;
 };
 
 

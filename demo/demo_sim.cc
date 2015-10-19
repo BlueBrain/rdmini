@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 #include "rdmini/rdmodel.h"
 #include "rdmini/serial_ssa.h"
@@ -24,10 +25,10 @@ struct usage_error: fatal_error {
 // usage info
 const char *usage_text=
     "[OPTION] [model-file]\n"
-    "  -m MODEL    Load the model named MODEL\n";
-    "  -n N        Run simulation N steps\n";
-    "  -t TIME     Run simulation for TIME simulated seconds\n";
-    "  -d TIME     Sample simulation every TIME seconds\n";
+    "  -m MODEL    Load the model named MODEL\n"
+    "  -n N        Run simulation N steps\n"
+    "  -t TIME     Run simulation for TIME simulated seconds\n"
+    "  -d TIME     Sample simulation every TIME seconds\n"
     "\nOne of -n or -t must be specified.\n";
 
 struct cl_args {
@@ -41,11 +42,11 @@ struct cl_args {
 cl_args parse_cl_args(int argc,char **argv) {
     cl_args A;
 
-    enum parse_state_enum { no_opt, opt_m, opt_n, opt_t, opt_dt } parse_state = no_opt;
+    enum parse_state_enum { no_opt, opt_m, opt_n, opt_t, opt_d } parse_state = no_opt;
     bool has_opt_m=false;
     bool has_opt_n=false;
     bool has_opt_t=false;
-    bool has_opt_dt=false;
+    bool has_opt_d=false;
     bool has_file=false;
 
     int i=0;
@@ -69,6 +70,7 @@ cl_args parse_cl_args(int argc,char **argv) {
                     break;
                 default:
                     throw usage_error("unrecognized option "+std::string(arg));
+                }
             }
             else {
                 if (has_file) throw usage_error("unexpected argument");
@@ -115,7 +117,7 @@ cl_args parse_cl_args(int argc,char **argv) {
 
 
 struct emit_sim {
-    explicit emit_sim(const rd_model &M): n_species(M.n_species()), n_cells(M.n_cells) {
+    explicit emit_sim(const rd_model &M): n_species(M.n_species()), n_cells(M.n_cells()) {
         // prepare csv-style header
         std::stringstream s;
         s << "time,cell";
@@ -132,10 +134,10 @@ struct emit_sim {
     template <typename Sim>
     std::ostream &emit_state(std::ostream &O, double t, const Sim &sim) {
         O << t;
-        for (size_t i=0; i<n_cell; ++i) {
+        for (size_t i=0; i<n_cells; ++i) {
             O << ',' << i;
             for (size_t j=0; j<n_species; ++j)
-                O << ',' << sim.count(j,i) ;
+                O << ',' << sim.count(j,i);
             O << '\n';
         }
         return O;
@@ -167,11 +169,11 @@ int main(int argc, char **argv) {
 
 
         emit_sim emitter(M);
-        emitter.emit_header(std::cout,M);
+        emitter.emit_header(std::cout);
 
         std::minstd_rand g;
         serial_ssa S(M,0);
-        emit_state(0,S);
+        emitter.emit_state(std::cout,0,S);
         if (A.n_events>0) { // event-by-event simulation
             for (size_t n=0; n<A.n_events; ++n) {
                 double t=S.advance(g);

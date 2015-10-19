@@ -27,9 +27,9 @@ struct reaction_info {
 struct cell_info {
     struct neighbour_data {
         size_t cell_id;
-        double diff_coeff;
+        double diff_coef;
 
-        explicit neighbour_data(size_t cell_id_=0, double diff_coeff_=0): cell_id(cell_id_), diff_coeff(diff_coeff_) {}
+        explicit neighbour_data(size_t cell_id_=0, double diff_coef_=0): cell_id(cell_id_), diff_coef(diff_coef_) {}
     };
 
     double volume;
@@ -56,6 +56,7 @@ struct rd_model {
     friend std::ostream &operator<<(std::ostream &O,const rd_model &M);
 
     size_t n_species() const { return species.size(); }
+    size_t n_reactions() const { return reactions.size(); }
     size_t n_cells() const { return cells.size(); }
 };
 
