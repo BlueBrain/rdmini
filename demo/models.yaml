@@ -7,8 +7,9 @@
 ---
 model: schnakenberg
 
-geometry:
-    wmvol: 1.0e-6
+cells:
+    wmvol:
+        volume: 1.0e-6
 
 species:
     name: A
@@ -35,9 +36,11 @@ reaction:
 ---
 model: turing
 
-geometry:
-    box: { extent: [ 1000, 1, 1 ], scale: 1.0e-6, cells: [40, 1, 1]  }
-
+cells:
+    grid:
+        scale: 1.0e-6
+        extent: [[ 0, 0, 0 ], [ 1000, 1, 1 ]]
+        counts: [40, 1, 1]
 species:
     name: A
     diffusivity: 1.0e-11

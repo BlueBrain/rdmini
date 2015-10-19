@@ -28,7 +28,7 @@ expression | return type | description
 `s.count(s_id,c_id)` | `count_type` | return population count of species index `s_id` in cell `c_id`
 `s.set_count(s_id,c_id,count)` | | set population count of species index `s_id` in cell `c_id`
 `s.advance(g)` | double | advance simulator state by minimum time step, returning new simulation time
-`s.advance(t,g)` | double | advance simulator past time `t`, returning new simulation time
+`s.advance(t,g)` | double | advance simulator up to time `t`, returning new simulation time
 
 
 # SSA selector implementations

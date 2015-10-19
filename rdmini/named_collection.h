@@ -71,7 +71,7 @@ struct named_collection {
         }
     }
 
-    key_type unique_key(const key_type &k) {
+    key_type unique_key(const key_type &k) const {
         key_type uk=k;
         int suffix=0;
         while (index(uk)>=0) uk=k+std::to_string(++suffix);

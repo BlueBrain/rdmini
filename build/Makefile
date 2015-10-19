@@ -33,6 +33,7 @@ endif
 
 # main targets
 
+#demos := demo_parse demo_ssa_direct demo_sim
 demos := demo_parse demo_ssa_direct
 tests := test_dummy
 benches := 

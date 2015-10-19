@@ -16,7 +16,11 @@
 // TODO: split into .h and .cc if we've got fixed template parameters.
 
 struct serial_ssa {
-    serial_ssa() {}
+    serial_ssa(): t(0), stale(true) {}
+
+    explicit serial_ssa(const rd_model &M, double t0=0) {
+        initialise(M,t0);
+    }
 
     struct kproc_info {
         std::vector<size_t> left_,right_;
@@ -27,7 +31,10 @@ struct serial_ssa {
         double rate() { return rate_; }
     };
 
-    void initialise(const rd_model &M,double t0): t(t0) {
+    void initialise(const rd_model &M, double t0) {
+        t=t0;
+        stale=true;
+
         n_species=M.species.size();
         n_reac=M.reactions.size();
         n_cell=M.geom.size();
@@ -86,42 +93,65 @@ struct serial_ssa {
     static constexpr unsigned int dynamic_range=32; // TODO: replace with correct value ...
 
     void set_count(size_t species_id,size_t cell_id,count_type count) {
-        ksys.set_pop_count(species_to_pop(species_id,cell_id),count); 
+        ksel_update U(ksys,ksel);
+        ksys.set_pop_count(species_to_pop(species_id,cell_id),count,U);
+        stale=true;
     }
 
-    count_type count(size_t species_id,size_t cell_id)
+    count_type count(size_t species_id,size_t cell_id) {
         return ksys.pop_count(species_to_pop(species_id,cell_id)); 
     }
 
     template <typename G>
     double advance(double t_end,G &g) {
-        while (t_end<=t) advance(g);
+        get_next();
+        while (t+next.dt<=t_end) advance(g);
+        next.dt-=t_end-t;
+        t=t_endl
         return t;
     }
 
     template <typename G>
     double advance(G &g) {
-        auto next=ksel.next(g);
+        get_next();
         ksys.apply(next.k_id,
             [&ksel](kproc_index k) { ksel.update(k,ksys.propensity(k)); });
 
         t+=next.dt;
+        stale=true;
+
         return t;
     }
 
         
 private:
+    typedef ssa_pp_procsys<3> proc_system;
+    typedef proc_system::key_type proc_index_type;
+
+    typedef ssa_direct<proc_index_type,double> ssa_selector;
+    typedef ssa_selector::event_type event_type;
+
+    struct ksel_update {
+        ksel_update(proc_system &sys_,ssa_selector &sel_): sys(sys_), sel(sel_) {}
+        proc_system &sys;
+        ssa_selector &sel;
+        void operator()(proc_index_type k) { sel.update(k, sys.propensity(k)) }
+    };
+
+    template <typename G> 
+    void get_next(G &g) {
+        if (stale) next=ksel.next(g);
+        stale=false;
+    }
+
     size_t n_species;
     size_t n_reac;
     size_t n_cell;
     size_t n_pop;
 
     double t; // sim time...
-
-    typedef ssa_direct ssa_selector;
-    typedef ssa_pp_procsys<3> proc_system;
-
-    typedef proc_system::key_type proc_index_type;
+    event_type next;
+    bool stale; // true => need to re-poll ksel
 
     proc_system ksys;
     ssa_selector ksel;

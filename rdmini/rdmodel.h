@@ -15,6 +15,7 @@ struct model_io_error: std::runtime_error {
 struct species_info {
     std::string name;
     double diffusivity;
+    double concentration;
 };
 
 struct reaction_info {
@@ -23,10 +24,29 @@ struct reaction_info {
     double rate;
 };
 
+struct cell_info {
+    struct neighbour_data {
+        size_t cell_id;
+        double diff_coeff;
+
+        explicit neighbour_data(size_t cell_id_=0, double diff_coeff_=0): cell_id(cell_id_), diff_coeff(diff_coeff_) {}
+    };
+
+    double volume;
+    std::vector<neighbour_data> neighbours;
+};
+
+struct cell_set {
+    std::string name;
+    std::vector<size_t> cells;
+};
+
 struct rd_model {
     std::string name;
     named_collection<species_info> species;
     named_collection<reaction_info> reactions;
+    named_collection<cell_set> cell_sets;
+    std::vector<cell_info> cells;
 
     void clear() {
         species.clear();
@@ -34,6 +54,9 @@ struct rd_model {
     }
 
     friend std::ostream &operator<<(std::ostream &O,const rd_model &M);
+
+    size_t n_species() const { return species.size(); }
+    size_t n_cells() const { return cells.size(); }
 };
 
 rd_model rd_model_read(std::istream &,const std::string &model_name="");
