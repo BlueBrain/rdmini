@@ -96,7 +96,7 @@ public:
     template <typename F>
     void set_count(size_t p,count_type c,F update_notify) {
         for (auto kci: pop_contribs_tbl[p])
-            apply_contrib_update(kci,pop_count[p]-c,update_notify);
+            apply_contrib_update(kci,c-pop_count[p],update_notify);
         pop_count[p]=c;
     }
 

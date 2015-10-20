@@ -66,4 +66,42 @@ reaction:
     rate: 3
 
 ...
+---
+model: schloegl
+
+cells:
+    wmvol: { volume: 1 }
+
+species:
+    name: A
+    concentration: 0
+
+reaction:
+    left: [ A, A ]
+    right: [ A, A, A ]
+    rate: [ 0.18, 2.5e-4 ]
+
+reaction:
+    right: A
+    rate: [ 2200, 37.5 ]
+
+...
+---
+model: schloegl_400
+
+cells:
+    wmvol: { volume: 1 }
+
+species:
+    name: A
+    concentration: 400
+
+reaction:
+    left: [ A, A ]
+    right: [ A, A, A ]
+    rate: [ 0.18, 2.5e-4 ]
+
+reaction:
+    right: A
+    rate: [ 2200, 37.5 ]
 
