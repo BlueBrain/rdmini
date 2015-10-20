@@ -159,7 +159,6 @@ struct emit_sim {
                     O << ',' << sim.count(j,i);
                 O << '\n';
             }
-            return O;
         }
         else {
             // consider exposing access to ssa population counts by population index directly
@@ -172,6 +171,7 @@ struct emit_sim {
                 for (size_t j=0; j<n_species; ++j)
                     batch_counts[offset++]=sim.count(j,i);
         }
+	return O;
     }
 
     std::ostream &flush(std::ostream &O) {
