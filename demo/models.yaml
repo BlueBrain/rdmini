@@ -9,15 +9,15 @@ model: schnakenberg
 
 cells:
     wmvol:
-        volume: 1.0e-6
+        volume: 1
 
 species:
     name: A
-    diffusivity: 1.0e-11
+    concentration: 10
 
 species:
     name: B
-    diffusivity: 1.0e-9
+    concentration: 10
 
 reaction:
     left: [ A, A, B ]
