@@ -185,8 +185,7 @@ static void parse_cells_grid(rd_model &M,const yaml_node_view &e) {
 
         auto cidx=[=](size_t i, size_t j, size_t k) { return c0+i+j*n[0]+k*n[0]*n[1]; };
 
-        point3d dc={1/(d[0]*d[0]),1/(d[1]*d[1]),1/(d[2]*d[2])};
-        dc*=vol;
+        point3d dc=1.0/(d*d);
         
         for (size_t k=0; k<n[2]; ++k) {
             for (size_t j=0; j<n[1]; ++j) {

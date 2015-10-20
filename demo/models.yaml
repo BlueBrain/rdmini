@@ -1,6 +1,7 @@
 # Very simple R-D system specification:
 #
-# * Base units are SI: metre, kilogram, second, mole etc.
+# * Base units are SI: metre, kilogram, second.
+#   Concentration measured in count / m^3.
 # * One geometry specification, currently only a box grid is supported.
 # * One implicitly defined compartment, consisting of cells from the geometry.
 
@@ -44,26 +45,28 @@ cells:
 species:
     name: A
     diffusivity: 1.0e-11
+    concentration: 8.0e18
 
 species:
     name: B
     diffusivity: 1.0e-9
+    concentration: 3.0e18
 
 reaction:
     name: r1
     left: [ A, A, B ]
     right: [ A, A, A ]
-    rate: 1e-6
+    rate: 25e-24
 
 reaction:
     name: r2
     right: A
-    rate: [ 1, 0.02 ]
+    rate: [ 25e-18, 0.5e-18 ]
 
 reaction:
     name: r3
     right: B
-    rate: 3
+    rate: 75e-18
 
 ...
 ---
@@ -104,4 +107,5 @@ reaction:
 reaction:
     right: A
     rate: [ 2200, 37.5 ]
+
 

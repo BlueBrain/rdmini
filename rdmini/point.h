@@ -21,7 +21,7 @@ struct point3d: public std::array<double,3> {
         data()[2]=x2;
     }
 
-    // arithmetic operations
+    // element-wise arithmetic operations
 
     point3d &operator+=(const point3d &p) {
         (*this)[0]+=p[0];
@@ -36,6 +36,22 @@ struct point3d: public std::array<double,3> {
         (*this)[2]-=p[2];
         return *this;
     }
+
+    point3d &operator*=(const point3d &p) {
+        (*this)[0]*=p[0];
+        (*this)[1]*=p[1];
+        (*this)[2]*=p[2];
+        return *this;
+    }
+
+    point3d &operator/=(const point3d &p) {
+        (*this)[0]/=p[0];
+        (*this)[1]/=p[1];
+        (*this)[2]/=p[2];
+        return *this;
+    }
+
+    // scaling  arithmetic operations
 
     point3d &operator*=(double x) {
         (*this)[0]*=x;
@@ -70,6 +86,14 @@ inline point3d operator+(point3d p, const point3d &q) {
 
 inline point3d operator-(point3d p, const point3d &q) {
     return p-=q;
+}
+
+inline point3d operator*(point3d p, const point3d &q) {
+    return p*=q;
+}
+
+inline point3d operator/(point3d p, const point3d &q) {
+    return p/=q;
 }
 
 inline point3d operator*(point3d p, double x) {
