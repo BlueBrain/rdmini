@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <limits>
 #include <algorithm>
+#include <iostream>
+#include <iomanip>
 
 #include "rdmini/iterspan.h"
 #include "rdmini/rdmodel.h"
@@ -20,7 +22,7 @@ template <unsigned MaxOrder=3>
 struct ssa_pp_procsys {
     typedef uint32_t key_type;
     typedef double value_type;
-    typedef uint32_t count_type;
+    typedef int32_t count_type;
 
 private:
     typedef uint32_t pop_index;
@@ -31,7 +33,19 @@ public:
     static constexpr size_t max_count=std::numeric_limits<count_type>::max();
     static constexpr size_t max_participants=max_population_index;
 
-    ssa_pp_procsys(): n_proc(0) {}
+    explicit ssa_pp_procsys(size_t n_pop_=0): n_pop(n_pop_), n_proc(0) {
+        reset(n_pop);
+    }
+
+    void reset(size_t n_pop_) {
+        if (n_pop_>0 && n_pop_-1>max_population_index)
+            throw ssa_error("population index out of bounds");
+
+        n_pop=n_pop_;
+        pop_count.resize(n_pop);
+        pop_contribs_tbl.resize(n_pop);
+        clear();
+    }
 
     template <typename In>
     void define_processes(In b,In e) {
@@ -44,6 +58,8 @@ public:
     void clear() {
         proc_propensity_tbl.clear();
         for (auto &entry: pop_contribs_tbl) entry.clear();
+
+        pop_count.assign(n_pop,0);
     }
 
     size_t size() const { return n_proc; }
@@ -81,15 +97,18 @@ public:
     void set_count(size_t p,count_type c,F update_notify) {
         for (auto kci: pop_contribs_tbl[p])
             apply_contrib_update(kci,pop_count[p]-c,update_notify);
+        pop_count[p]=c;
     }
 
     void set_count(size_t p,count_type c) { set_count(p,c,[](key_type) {}); }
 
     template <typename F>
     void apply(key_type k,F update_notify) {
-        for (auto pd: proc_delta_tbl[k]) 
+        for (auto pd: proc_delta_tbl[k]) {
             for (auto kci: pop_contribs_tbl[pd.p])
                 apply_contrib_update(kci,pd.delta,update_notify);
+            pop_count[pd.p]+=pd.delta;
+        }
     }
 
     void apply(key_type k) { apply(k,[](key_type) {}); }
@@ -101,7 +120,50 @@ public:
         return r;
     }
 
+    friend std::ostream& operator<<(std::ostream &O,const ssa_pp_procsys &sys) {
+        // primarily for debugging
+        O << "ssa_pp_procsys: n_pop=" << sys.n_pop << ", n_proc=" << sys.n_proc << "\n";
+        O << "pop_contribs_tbl:\n";
+        size_t idx=0;
+        for (const auto &e: sys.pop_contribs_tbl) {
+            O << "    " << std::setw(6) << std::right << idx++ << ":";
+            for (const auto &kci: e) 
+                O << ' ' << kci.k  << ':'
+                  << std::showpos << kci.i << std::noshowpos;
+            O << "\n";
+        }
+        O << "proc_delta_tbl:\n";
+        idx=0;
+        for (const auto &e: sys.proc_delta_tbl) {
+            O << "    " << std::setw(6) << std::right << idx++ << ":";
+            for (const auto &pd: e) 
+                O << ' ' << pd.p  << ':'
+                  << std::showpos << pd.delta << std::noshowpos;
+            O << "\n";
+        }
+        O << "pop_count:\n";
+        idx=0;
+        for (const auto &c: sys.pop_count) {
+            O << "    " << std::setw(6) << std::right << idx++ << ":"
+              << ' ' << c << '\n';
+        }
+        O << "proc_propensity_tbl:\n";
+        idx=0;
+        for (const auto &e: sys.proc_propensity_tbl) {
+            O << "    " << std::setw(6) << std::right << idx++ << ":";
+            O << " rate=" << std::left << std::setw(10) << e.rate;
+            O << " counts:";
+            for (const auto &c: e.counts) 
+                O << ' ' << c;
+            O << "\n";
+        }
+        return O;
+    }
+
 private:
+    size_t n_pop;
+    size_t n_proc;
+
     template <typename Proc>
     void add_proc(const Proc &proc) {
         if (n_proc>=std::numeric_limits<key_type>::max())
@@ -109,29 +171,29 @@ private:
 
         key_type key=n_proc++;
 
-        proc_propensity_tbl.resize(key);
+        proc_propensity_tbl.resize(n_proc);
         proc_propensity_tbl[key].rate=proc.rate();
 
         std::vector<pop_index> left_sorted;
         std::map<pop_index,count_type> delta_map;
         for (auto p: proc.left()) {
-            if (p>max_population_index) throw ssa_error("population index out of bounds");
+            if (p>=n_pop) throw ssa_error("population index out of bounds");
             --delta_map[p];
             left_sorted.push_back(p);
         }
         for (auto p: proc.right()) {
-            if (p>max_population_index) throw ssa_error("population index out of bounds");
+            if (p>=n_pop) throw ssa_error("population index out of bounds");
             ++delta_map[p];
         }
 
-        proc_delta_tbl.resize(key);
+        proc_delta_tbl.resize(n_proc);
         auto &pd_entry=proc_delta_tbl[key];
-        for (auto pd: delta_map) pd_entry.push_back({pd.first,pd.second});
+        for (auto pd: delta_map)
+           if (pd.second) pd_entry.push_back({pd.first,pd.second});
 
         std::sort(left_sorted.begin(),left_sorted.end());
         uint32_t index=0;
         for (auto p: left_sorted) {
-            if (p>=pop_contribs_tbl.size()) pop_contribs_tbl.resize(p+1);
             pop_contribs_tbl[p].emplace_back(key,index++);
         }
     }
@@ -152,14 +214,12 @@ private:
         notify(kci.k);
     }
 
-    size_t n_proc;
-
     std::vector<count_type> pop_count;
     
     // process to population delta map: constant per model
     struct proc_delta {
         pop_index p; // which population
-        uint32_t delta; // delta to apply
+        int32_t delta; // delta to apply
     };
     typedef std::vector<proc_delta> proc_delta_entry;
     std::vector<proc_delta_entry> proc_delta_tbl;

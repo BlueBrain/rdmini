@@ -29,6 +29,7 @@ const char *usage_text=
     "  -n N        Run simulation N steps\n"
     "  -t TIME     Run simulation for TIME simulated seconds\n"
     "  -d TIME     Sample simulation every TIME seconds\n"
+    "  -v          Verbose output\n"
     "\nOne of -n or -t must be specified.\n";
 
 struct cl_args {
@@ -37,6 +38,7 @@ struct cl_args {
     double dt=0;
     double t_end=0;
     size_t n_events=0;
+    int verbosity=0;
 };
 
 cl_args parse_cl_args(int argc,char **argv) {
@@ -67,6 +69,9 @@ cl_args parse_cl_args(int argc,char **argv) {
                     break;
                 case 'd':
                     parse_state=opt_d;
+                    break;
+                case 'v':
+                    ++A.verbosity;
                     break;
                 default:
                     throw usage_error("unrecognized option "+std::string(arg));
@@ -174,10 +179,12 @@ int main(int argc, char **argv) {
         std::minstd_rand g;
         serial_ssa S(M,0);
         emitter.emit_state(std::cout,0,S);
+        if (A.verbosity) std::cout << S; //debug
         if (A.n_events>0) { // event-by-event simulation
             for (size_t n=0; n<A.n_events; ++n) {
                 double t=S.advance(g);
                 emitter.emit_state(std::cout,t,S);
+                if (A.verbosity) std::cout << S; //debug
             }
         }
         else {

@@ -94,6 +94,7 @@ public:
             }
         }
 
+        ksys.reset(n_pop);
         ksys.define_processes(kp_set.begin(),kp_set.end());
         ksel.reset(ksys.size());
 
@@ -141,6 +142,11 @@ public:
         return t;
     }
 
+    friend std::ostream &operator<<(std::ostream &O,const serial_ssa &S) {
+        O << S.ksys;
+        // O << S.ksel;
+        return O;
+    }
         
 private:
     template <typename G> 

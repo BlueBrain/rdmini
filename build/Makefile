@@ -8,23 +8,26 @@ COMPILER := gnu
 
 # compiler flags
 
+#OPTFLAGS = -g -O3
+OPTFLAGS = -g -O0
+
 ifeq "$(COMPILER)" "gnu"
 # gcc, g++
 CC = gcc
 CXX = g++
-CFLAGS = -g -O3
-CXXFLAGS = -std=c++11 -g -O3 -fopenmp
+CFLAGS = $(OPTFLAGS)
+CXXFLAGS = -std=c++11 $(OPTFLAGS) -fopenmp
 CXXFLAGS += -MMD -MP  # auto-generate dependencies
 # pgc, pgc++
 else ifeq "$(COMPILER)" "pgi"
 CC = pgcc
 CXX = pgc++
-CXXFLAGS = -std=c++11 -g -O3 -mp
+CXXFLAGS = -std=c++11 $(OPTFLAGS) -mp
 MAKEDEPEND := 1 # dependency generation doesn't handle directory in -o
 else ifeq "$(COMPILER)" "cray"
 CC = cc
 CXX = CC
-CXXFLAGS = -h std=c++11 -g -O3 -h omp
+CXXFLAGS = -h std=c++11 $(OPTFLAGS) -h omp
 MAKEDEPEND := 1 # no useful autodependency generation
 else
 CC = __error__
