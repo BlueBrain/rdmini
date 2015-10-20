@@ -123,8 +123,13 @@ public:
 
     template <typename G>
     double advance(double t_end,G &g) {
-        get_next(g);
-        while (t+next.dt<=t_end) advance(g);
+        for (;;) {
+            get_next(g);
+            if (t+next.dt>t_end) break;
+
+            advance(g);
+        }
+
         next.dt-=t_end-t;
         t=t_end;
         return t;
