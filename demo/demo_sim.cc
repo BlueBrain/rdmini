@@ -28,17 +28,19 @@ const char *usage_text=
     "  -m MODEL    Load the model named MODEL\n"
     "  -n N        Run simulation N steps\n"
     "  -t TIME     Run simulation for TIME simulated seconds\n"
-    "  -d TIME     Sample simulation every TIME seconds\n"
+    "  -d N/TIME   Sample simulation every N steps or TIME seconds\n"
     "  -v          Verbose output\n"
+    "  -B          Batch output\n"
     "\nOne of -n or -t must be specified.\n";
 
 struct cl_args {
     std::string model_file;
     std::string model_name;
-    double dt=0;
+    double sample_delta=0;
     double t_end=0;
     size_t n_events=0;
     int verbosity=0;
+    bool batch=false;
 };
 
 cl_args parse_cl_args(int argc,char **argv) {
@@ -72,6 +74,9 @@ cl_args parse_cl_args(int argc,char **argv) {
                     break;
                 case 'v':
                     ++A.verbosity;
+                    break;
+                case 'B':
+                    A.batch=true;
                     break;
                 default:
                     throw usage_error("unrecognized option "+std::string(arg));
@@ -107,7 +112,7 @@ cl_args parse_cl_args(int argc,char **argv) {
         case opt_d:
             if (has_opt_d)
                 throw usage_error("-d specified multiple times");
-            A.dt=std::stod(arg);
+            A.sample_delta=std::stod(arg);
             has_opt_d=true;
             parse_state=no_opt;
             break;
@@ -122,7 +127,7 @@ cl_args parse_cl_args(int argc,char **argv) {
 
 
 struct emit_sim {
-    explicit emit_sim(const rd_model &M): n_species(M.n_species()), n_cells(M.n_cells()) {
+    explicit emit_sim(const rd_model &M, bool batch_=false, size_t expected_samples=0): n_species(M.n_species()), n_cells(M.n_cells()), batch(batch_) {
         // prepare csv-style header
         std::stringstream s;
         s << "time,cell";
@@ -132,23 +137,68 @@ struct emit_sim {
         
         s << '\n';
         header=s.str();
+
+        if (batch) {
+            batch_n=0;
+            batch_stride=n_species*n_cells;
+            batch_t.reserve(expected_samples);
+            batch_counts.reserve(batch_stride*expected_samples);
+        }
     }
     
-    std::ostream &emit_header(std::ostream &O) { return O << header; }
+    std::ostream &emit_header(std::ostream &O) {
+        return batch?O:O << header;
+    }
 
     template <typename Sim>
     std::ostream &emit_state(std::ostream &O, double t, const Sim &sim) {
-        for (size_t i=0; i<n_cells; ++i) {
-            O << t << ',' << i;
-            for (size_t j=0; j<n_species; ++j)
-                O << ',' << sim.count(j,i);
-            O << '\n';
+        if (!batch) {
+            for (size_t i=0; i<n_cells; ++i) {
+                O << t << ',' << i;
+                for (size_t j=0; j<n_species; ++j)
+                    O << ',' << sim.count(j,i);
+                O << '\n';
+            }
+            return O;
+        }
+        else {
+            // consider exposing access to ssa population counts by population index directly
+            batch_t.push_back(t);
+            size_t offset=batch_stride*batch_n;
+            batch_counts.resize(offset+batch_stride);
+            ++batch_n;
+
+            for (size_t i=0; i<n_cells; ++i)
+                for (size_t j=0; j<n_species; ++j)
+                    batch_counts[offset++]=sim.count(j,i);
+        }
+    }
+
+    std::ostream &flush(std::ostream &O) {
+        if (!batch) return O;
+
+        O << header;
+        for (size_t k=0; k<batch_n; ++k) {
+            size_t offset=batch_stride*k;
+            double t=batch_t[k];
+            for (size_t i=0; i<n_cells; ++i) {
+                O << t << ',' << i;
+                for (size_t j=0; j<n_species; ++j)
+                    O << ',' << batch_counts[offset++];
+                O << '\n';
+            }
         }
         return O;
     }
 
+    bool batch;
     size_t n_species,n_cells;
     std::string header;
+
+    std::vector<double> batch_t;
+    std::vector<size_t> batch_counts;
+    size_t batch_stride;
+    size_t batch_n;
 };
 
 
@@ -159,6 +209,8 @@ int main(int argc, char **argv) {
 
     try {
         cl_args A=parse_cl_args(argc,argv);
+
+        // read in model specification
 
         rd_model M;
 
@@ -171,28 +223,51 @@ int main(int argc, char **argv) {
             M=rd_model_read(file,A.model_name);
         }
 
-
-        emit_sim emitter(M);
-        emitter.emit_header(std::cout);
-
+        // set up simulator
+            
         std::minstd_rand g;
         serial_ssa S(M,0);
+
+        // run simulation
+
+        size_t expected_samples=0;
+        if (A.n_events>0) {
+            if (A.sample_delta<1) A.sample_delta=1;
+            expected_samples=1+A.n_events/(size_t)(A.sample_delta);
+        }
+        else {
+            if (A.sample_delta==0) A.sample_delta=A.t_end;
+            expected_samples=1+(size_t)(A.t_end/A.sample_delta);
+        }
+
+        emit_sim emitter(M,A.batch,expected_samples);
+        emitter.emit_header(std::cout);
+
         emitter.emit_state(std::cout,0,S);
-        if (A.verbosity) std::cout << S; //debug
+        if (A.verbosity) std::cout << S;
+
         if (A.n_events>0) { // event-by-event simulation
-            for (size_t n=0; n<A.n_events; ++n) {
-                double t=S.advance(g);
+            double t;
+            size_t dn=(size_t)A.sample_delta;
+
+            for (size_t n=0; n<A.n_events; n+=dn) {
+                for (size_t i=0; i<dn; ++i)
+                    t=S.advance(g);
+
                 emitter.emit_state(std::cout,t,S);
-                if (A.verbosity) std::cout << S; //debug
+                if (A.verbosity) std::cout << S;
             }
         }
         else {
             double t=0;
             while (t<A.t_end) {
-                t=S.advance(t+A.dt,g);
+                t=S.advance(t+A.sample_delta,g);
+
                 emitter.emit_state(std::cout,t,S);
+                if (A.verbosity) std::cout << S;
             }
         }
+        emitter.flush(std::cout);
     }
     catch (usage_error &E) {
         std::cerr << basename << ": " << E.what() << "\n";
