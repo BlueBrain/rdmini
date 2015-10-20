@@ -18,8 +18,8 @@ struct ssa_direct {
     class event_type: std::pair<key_type,double> {
         typedef std::pair<key_type,double> pair_type;
     public:
-        using pair_type::first_type;
-        using pair_type::second_type;
+        using typename pair_type::first_type;
+        using typename pair_type::second_type;
         
         event_type() =default;
         event_type(key_type k_,double dt_): pair_type(k_,dt_) {}

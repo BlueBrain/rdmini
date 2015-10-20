@@ -1,6 +1,7 @@
 # global flags
 
 BUILD_YAML := 1
+# compiler: gnu, pgi, cray, or clang
 COMPILER := gnu
 
 .PHONY: clean all realclean test bench depend doc
@@ -17,6 +18,13 @@ CC = gcc
 CXX = g++
 CFLAGS = $(OPTFLAGS)
 CXXFLAGS = -std=c++11 $(OPTFLAGS) -fopenmp
+CXXFLAGS += -MMD -MP  # auto-generate dependencies
+else ifeq "$(COMPILER)" "clang"
+# clang, clang++
+CC = clang
+CXX = clang++
+CFLAGS = $(OPTFLAGS)
+CXXFLAGS = -std=c++11 $(OPTFLAGS) -fopenmp -Wno-logical-op-parentheses
 CXXFLAGS += -MMD -MP  # auto-generate dependencies
 # pgc, pgc++
 else ifeq "$(COMPILER)" "pgi"

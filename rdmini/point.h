@@ -2,6 +2,7 @@
 #define POINT_H_
 
 #include <cmath>
+#include <array>
 
 struct point3d: public std::array<double,3> {
     point3d() = default;
