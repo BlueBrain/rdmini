@@ -138,9 +138,8 @@ struct emit_sim {
 
     template <typename Sim>
     std::ostream &emit_state(std::ostream &O, double t, const Sim &sim) {
-        O << t;
         for (size_t i=0; i<n_cells; ++i) {
-            O << ',' << i;
+            O << t << ',' << i;
             for (size_t j=0; j<n_species; ++j)
                 O << ',' << sim.count(j,i);
             O << '\n';
