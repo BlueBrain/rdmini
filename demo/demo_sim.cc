@@ -7,6 +7,9 @@
 
 #include "rdmini/rdmodel.h"
 #include "rdmini/serial_ssa.h"
+#include "rdmini/rdmini_version.h"
+
+const char *demo_sim_version="0.0.1";
 
 // throw to clean-up and exit
 struct fatal_error: std::exception {
@@ -31,6 +34,9 @@ const char *usage_text=
     "  -d N/TIME   Sample simulation every N steps or TIME seconds\n"
     "  -v          Verbose output\n"
     "  -B          Batch output\n"
+    "\n"
+    "  -h          Print usage information\n"
+    "  -V          Print version information\n"
     "\nOne of -n or -t must be specified.\n";
 
 struct cl_args {
@@ -41,6 +47,9 @@ struct cl_args {
     size_t n_events=0;
     int verbosity=0;
     bool batch=false;
+
+    bool help=false;
+    bool version=false;
 };
 
 cl_args parse_cl_args(int argc,char **argv) {
@@ -78,6 +87,12 @@ cl_args parse_cl_args(int argc,char **argv) {
                 case 'B':
                     A.batch=true;
                     break;
+                case 'h':
+                    A.help=true; // and return!
+                    return A;
+                case 'V':
+                    A.version=true; // and return!
+                    return A;
                 default:
                     throw usage_error("unrecognized option "+std::string(arg));
                 }
@@ -209,6 +224,17 @@ int main(int argc, char **argv) {
 
     try {
         cl_args A=parse_cl_args(argc,argv);
+
+        if (A.help) {
+            std::cout << "Usage: " << basename << " " << usage_text;
+            return 0;
+        }
+
+        if (A.version) {
+            std::cout << basename << " version " << demo_sim_version << "\n";
+            std::cout << "rdmini library version " << rdmini_version << "\n";
+            return 0;
+        }
 
         // read in model specification
 

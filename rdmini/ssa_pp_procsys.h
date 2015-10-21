@@ -199,7 +199,7 @@ private:
         }
     }
 
-    // population to process rate factor map: constant per model
+    // population to process rate factor map: constant per model (i.e. shareable)
     struct proc_contrib_index {
         key_type k; // which process
         uint32_t i; // which slot in rate contribs
@@ -215,9 +215,7 @@ private:
         notify(kci.k);
     }
 
-    std::vector<count_type> pop_count;
-    
-    // process to population delta map: constant per model
+    // process to population delta map: constant per model (i.e. shareable)
     struct proc_delta {
         pop_index p; // which population
         int32_t delta; // delta to apply
@@ -225,7 +223,10 @@ private:
     typedef std::vector<proc_delta> proc_delta_entry;
     std::vector<proc_delta_entry> proc_delta_tbl;
 
-    // process rate factor table: evolves over time
+    // population counts (mutable, instance-specific)
+    std::vector<count_type> pop_count;
+    
+    // process rate factor table (mutable, instance-specific)
     struct proc_propensity_entry {
         value_type rate;
         std::array<count_type,max_process_order> counts;
