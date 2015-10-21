@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <chrono>
 
 #include "rdmini/rdmodel.h"
 #include "rdmini/serial_ssa.h"
@@ -203,6 +204,9 @@ struct emit_sim {
 
 
 int main(int argc, char **argv) {
+    std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+    std::chrono::duration<double,std::nano> elapsed_time;
+
     const char *basename=strrchr(argv[0],'/');
     basename=basename?basename+1:argv[0];
     int rc=0;
@@ -246,10 +250,12 @@ int main(int argc, char **argv) {
         emitter.emit_state(std::cout,0,S);
         if (A.verbosity) std::cout << S;
 
+
         if (A.n_events>0) { // event-by-event simulation
             double t;
             size_t dn=(size_t)A.sample_delta;
 
+            start = std::chrono::high_resolution_clock::now();
             for (size_t n=0; n<A.n_events; n+=dn) {
                 for (size_t i=0; i<dn; ++i)
                     t=S.advance(g);
@@ -257,17 +263,24 @@ int main(int argc, char **argv) {
                 emitter.emit_state(std::cout,t,S);
                 if (A.verbosity) std::cout << S;
             }
+            end = std::chrono::high_resolution_clock::now();
         }
         else {
             double t=0;
+
+            start = std::chrono::high_resolution_clock::now();
             while (t<A.t_end) {
                 t=S.advance(t+A.sample_delta,g);
 
                 emitter.emit_state(std::cout,t,S);
                 if (A.verbosity) std::cout << S;
             }
+            end = std::chrono::high_resolution_clock::now();
         }
+        elapsed_time = end-start;
         emitter.flush(std::cout);
+        std::cout << "---------------- \n";
+        std::cout << "elapsed time: " << elapsed_time.count() << " [nano s] \n";
     }
     catch (usage_error &E) {
         std::cerr << basename << ": " << E.what() << "\n";
@@ -278,7 +291,8 @@ int main(int argc, char **argv) {
         std::cerr << basename << ": " << E.what() << "\n";
         rc=1;
     }
-    
+
+       
     return rc;
 }
 
