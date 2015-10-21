@@ -9,8 +9,8 @@ COMPILER := gnu
 
 # compiler flags
 
-#OPTFLAGS = -g -O3
-OPTFLAGS = -g -O0
+OPTFLAGS = -O3
+#OPTFLAGS = -g -O0
 
 ifeq "$(COMPILER)" "gnu"
 # gcc, g++
