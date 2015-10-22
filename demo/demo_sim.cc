@@ -155,6 +155,7 @@ cl_args parse_cl_args(int argc,char **argv) {
 }
 
 
+// TODO: consider ni independent data structures for thread friendliness.
 struct emit_sim {
     explicit emit_sim(const rd_model &M, size_t ni, bool batch_=false, size_t expected_samples=0): n_species(M.n_species()), n_cells(M.n_cells()), n_instances(ni), batch(batch_) {
         // prepare csv-style header
@@ -194,11 +195,14 @@ struct emit_sim {
             batch_sample b={instance, t, offset}; 
             batch_samples.push_back(b);
 
-            batch_count_data.resize(offset+batch_sample_width);
+            #pragma omp critical
+            {
+                batch_count_data.resize(offset+batch_sample_width);
 
-            for (size_t i=0; i<n_cells; ++i)
-                for (size_t j=0; j<n_species; ++j)
-                    batch_count_data[offset++]=sim.count(instance,j,i);
+                for (size_t i=0; i<n_cells; ++i)
+                    for (size_t j=0; j<n_species; ++j)
+                        batch_count_data[offset++]=sim.count(instance,j,i);
+            }
         }
 	return O;
     }
@@ -271,9 +275,6 @@ void run_sim_by_time(parallel_ssa &S,emit_sim &emitter,double t_end,double dt,bo
 
 
 int main(int argc, char **argv) {
-    std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
-    std::chrono::duration<double,std::nano> elapsed_time;
-
     const char *basename=strrchr(argv[0],'/');
     basename=basename?basename+1:argv[0];
     int rc=0;
