@@ -4,8 +4,8 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <chrono>
 
+#include "rdmini/timer.h"
 #include "rdmini/rdmodel.h"
 #include "rdmini/serial_ssa.h"
 #include "rdmini/rdmini_version.h"
@@ -33,6 +33,7 @@ const char *usage_text=
     "  -n N        Run simulation N steps\n"
     "  -t TIME     Run simulation for TIME simulated seconds\n"
     "  -d N/TIME   Sample simulation every N steps or TIME seconds\n"
+    "  -P N        Run N independent instances\n"
     "  -v          Verbose output\n"
     "  -B          Batch output\n"
     "\n"
@@ -48,6 +49,7 @@ struct cl_args {
     size_t n_events=0;
     int verbosity=0;
     bool batch=false;
+    int n_instances=1;
 
     bool help=false;
     bool version=false;
@@ -56,11 +58,12 @@ struct cl_args {
 cl_args parse_cl_args(int argc,char **argv) {
     cl_args A;
 
-    enum parse_state_enum { no_opt, opt_m, opt_n, opt_t, opt_d } parse_state = no_opt;
+    enum parse_state_enum { no_opt, opt_m, opt_n, opt_t, opt_d, opt_P } parse_state = no_opt;
     bool has_opt_m=false;
     bool has_opt_n=false;
     bool has_opt_t=false;
     bool has_opt_d=false;
+    bool has_opt_P=false;
     bool has_file=false;
 
     int i=0;
@@ -81,6 +84,9 @@ cl_args parse_cl_args(int argc,char **argv) {
                     break;
                 case 'd':
                     parse_state=opt_d;
+                    break;
+                case 'P':
+                    parse_state=opt_P;
                     break;
                 case 'v':
                     ++A.verbosity;
@@ -132,6 +138,13 @@ cl_args parse_cl_args(int argc,char **argv) {
             has_opt_d=true;
             parse_state=no_opt;
             break;
+        case opt_P:
+            if (has_opt_P)
+                throw usage_error("-P specified multiple times");
+            A.n_instances=std::stoi(arg);
+            has_opt_P=true;
+            parse_state=no_opt;
+            break;
         }
     }
 
@@ -143,10 +156,10 @@ cl_args parse_cl_args(int argc,char **argv) {
 
 
 struct emit_sim {
-    explicit emit_sim(const rd_model &M, bool batch_=false, size_t expected_samples=0): n_species(M.n_species()), n_cells(M.n_cells()), batch(batch_) {
+    explicit emit_sim(const rd_model &M, size_t ni, bool batch_=false, size_t expected_samples=0): n_species(M.n_species()), n_cells(M.n_cells()), n_instances(ni), batch(batch_) {
         // prepare csv-style header
         std::stringstream s;
-        s << "time,cell";
+        s << "instance,time,cell";
 
         for (size_t i=0; i<n_species; ++i) 
             s << ',' << M.species[i].name;
@@ -155,10 +168,9 @@ struct emit_sim {
         header=s.str();
 
         if (batch) {
-            batch_n=0;
-            batch_stride=n_species*n_cells;
-            batch_t.reserve(expected_samples);
-            batch_counts.reserve(batch_stride*expected_samples);
+            batch_sample_width=n_species*n_cells;
+            batch_samples.reserve(n_instances*expected_samples);
+            batch_count_data.reserve(n_instances*batch_sample_width*expected_samples);
         }
     }
     
@@ -167,10 +179,10 @@ struct emit_sim {
     }
 
     template <typename Sim>
-    std::ostream &emit_state(std::ostream &O, double t, const Sim &sim) {
+    std::ostream &emit_state(std::ostream &O, size_t instance, double t, const Sim &sim) {
         if (!batch) {
             for (size_t i=0; i<n_cells; ++i) {
-                O << t << ',' << i;
+                O << instance << ',' << t << ',' << i;
                 for (size_t j=0; j<n_species; ++j)
                     O << ',' << sim.count(j,i);
                 O << '\n';
@@ -178,14 +190,15 @@ struct emit_sim {
         }
         else {
             // consider exposing access to ssa population counts by population index directly
-            batch_t.push_back(t);
-            size_t offset=batch_stride*batch_n;
-            batch_counts.resize(offset+batch_stride);
-            ++batch_n;
+            size_t offset=batch_count_data.size();
+            batch_sample b={instance, t, offset}; 
+            batch_samples.push_back(b);
+
+            batch_count_data.resize(offset+batch_sample_width);
 
             for (size_t i=0; i<n_cells; ++i)
                 for (size_t j=0; j<n_species; ++j)
-                    batch_counts[offset++]=sim.count(j,i);
+                    batch_count_data[offset++]=sim.count(j,i);
         }
 	return O;
     }
@@ -194,13 +207,12 @@ struct emit_sim {
         if (!batch) return O;
 
         O << header;
-        for (size_t k=0; k<batch_n; ++k) {
-            size_t offset=batch_stride*k;
-            double t=batch_t[k];
+        for (const auto &sample: batch_samples) {
+            size_t offset=sample.count_data_offset;
             for (size_t i=0; i<n_cells; ++i) {
-                O << t << ',' << i;
+                O << sample.instance << ',' << sample.t << ',' << i;
                 for (size_t j=0; j<n_species; ++j)
-                    O << ',' << batch_counts[offset++];
+                    O << ',' << batch_count_data[offset++];
                 O << '\n';
             }
         }
@@ -208,14 +220,44 @@ struct emit_sim {
     }
 
     bool batch;
-    size_t n_species,n_cells;
+    size_t n_species,n_cells,n_instances;
     std::string header;
 
-    std::vector<double> batch_t;
-    std::vector<size_t> batch_counts;
-    size_t batch_stride;
-    size_t batch_n;
+    struct batch_sample {
+        size_t instance;
+        double t;
+        size_t count_data_offset;
+    };
+    size_t batch_sample_width;
+
+    std::vector<batch_sample> batch_samples;
+    std::vector<size_t> batch_count_data;
 };
+
+void run_sim_by_steps(serial_ssa &S,emit_sim &emitter,size_t n,size_t dn,bool verbose) {
+    std::minstd_rand g;
+
+    double t;
+    for (size_t i=0; i<n; i+=dn) {
+        for (size_t j=0; j<dn; ++j)
+            t=S.advance(g);
+
+        emitter.emit_state(std::cout,1,t,S);
+        if (verbose) std::cout << S;
+    }
+}
+
+void run_sim_by_time(serial_ssa &S,emit_sim &emitter,double t_end,double dt,bool verbose) {
+    std::minstd_rand g;
+
+    double t=0;
+    while (t<t_end) {
+        t=S.advance(t+dt,g);
+
+        emitter.emit_state(std::cout,1,t,S);
+        if (verbose) std::cout << S;
+    }
+}
 
 
 int main(int argc, char **argv) {
@@ -253,12 +295,9 @@ int main(int argc, char **argv) {
             M=rd_model_read(file,A.model_name);
         }
 
-        // set up simulator
-            
-        std::minstd_rand g;
-        serial_ssa S(M,0);
+        // set up data emitter and timer
 
-        // run simulation
+        timer::hr_timer T;
 
         size_t expected_samples=0;
         if (A.n_events>0) {
@@ -270,43 +309,32 @@ int main(int argc, char **argv) {
             expected_samples=1+(size_t)(A.t_end/A.sample_delta);
         }
 
-        emit_sim emitter(M,A.batch,expected_samples);
+        emit_sim emitter(M,A.n_instances,A.batch,expected_samples);
         emitter.emit_header(std::cout);
 
-        emitter.emit_state(std::cout,0,S);
+        // set up simulator
+            
+        serial_ssa S(M,0);
+
+        // emit initial state
+
+        emitter.emit_state(std::cout,1,0,S);
         if (A.verbosity) std::cout << S;
 
+        // run simulation
 
-        if (A.n_events>0) { // event-by-event simulation
-            double t;
-            size_t dn=(size_t)A.sample_delta;
-
-            start = std::chrono::high_resolution_clock::now();
-            for (size_t n=0; n<A.n_events; n+=dn) {
-                for (size_t i=0; i<dn; ++i)
-                    t=S.advance(g);
-
-                emitter.emit_state(std::cout,t,S);
-                if (A.verbosity) std::cout << S;
-            }
-            end = std::chrono::high_resolution_clock::now();
+        if (A.n_events>0) {
+            auto _(timer::guard(T));
+            run_sim_by_steps(S,emitter,A.n_events,(size_t)A.sample_delta,A.verbosity>0);
         }
         else {
-            double t=0;
-
-            start = std::chrono::high_resolution_clock::now();
-            while (t<A.t_end) {
-                t=S.advance(t+A.sample_delta,g);
-
-                emitter.emit_state(std::cout,t,S);
-                if (A.verbosity) std::cout << S;
-            }
-            end = std::chrono::high_resolution_clock::now();
+            auto _(timer::guard(T));
+            run_sim_by_time(S,emitter,A.t_end,A.sample_delta,A.verbosity>0);
         }
-        elapsed_time = end-start;
         emitter.flush(std::cout);
-        std::cout << "---------------- \n";
-        std::cout << "elapsed time: " << elapsed_time.count() << " [nano s] \n";
+
+        std::cout << "#---------------- \n";
+        std::cout << "#elapsed time: " << T.time()*1.0e9 << " [nano s] \n";
     }
     catch (usage_error &E) {
         std::cerr << basename << ": " << E.what() << "\n";
@@ -318,7 +346,6 @@ int main(int argc, char **argv) {
         rc=1;
     }
 
-       
     return rc;
 }
 
