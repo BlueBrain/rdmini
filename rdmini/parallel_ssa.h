@@ -70,8 +70,8 @@ public:
             for (const auto &reac: M.reactions) {
                 kproc_info ki;
                 ki.rate_=reac.rate/vol;
-                for (size_t s_id: reac.left) ki.left_.push_back(species_to_pop(s_id,c_id));
-                for (size_t s_id: reac.right) ki.right_.push_back(species_to_pop(s_id,c_id));
+                for (size_t s_id: reac.left) ki.left_.push_back(species_to_pop_id(s_id,c_id));
+                for (size_t s_id: reac.right) ki.right_.push_back(species_to_pop_id(s_id,c_id));
             
                 kp_set.push_back(ki);
             }
@@ -86,8 +86,8 @@ public:
                 ki.left_.resize(1);
                 ki.right_.resize(1);
                 for (size_t s_id=0; s_id<n_species; ++s_id) {
-                    ki.left_[0]=species_to_pop(s_id,c_id);
-                    ki.right_[0]=species_to_pop(s_id,neighbour.cell_id);
+                    ki.left_[0]=species_to_pop_id(s_id,c_id);
+                    ki.right_[0]=species_to_pop_id(s_id,neighbour.cell_id);
                     ki.rate_=neighbour.diff_coef*M.species[s_id].diffusivity;
 
                     kp_set.push_back(ki);
@@ -112,7 +112,7 @@ public:
             for (size_t s_id=0; s_id<n_species; ++s_id) {
                 double conc=M.species[s_id].concentration;
                 for (size_t c_id=0; c_id<n_cell; ++c_id)
-                    state.ksys.set_count(species_to_pop(s_id,c_id),conc*M.cells[c_id].volume);
+                    state.ksys.set_count(species_to_pop_id(s_id,c_id),conc*M.cells[c_id].volume);
             }
 
             // initialise selector with propensities
@@ -125,12 +125,19 @@ public:
         auto &state=states[instance];
         ksel_update U(state.ksys,state.ksel);
 
-        state.ksys.set_count(species_to_pop(species_id,cell_id),count,U);
+        state.ksys.set_count(species_to_pop_id(species_id,cell_id),count,U);
         state.stale=true;
     }
 
     count_type count(size_t instance,size_t species_id,size_t cell_id) const {
-        return states[instance].ksys.count(species_to_pop(species_id,cell_id)); 
+        return states[instance].ksys.count(species_to_pop_id(species_id,cell_id)); 
+    }
+
+    
+    template <typename Out>
+    void copy_counts(size_t instance,Out out) const {
+        const auto &state=states[instance];
+        state.ksys.copy_counts(out);
     }
 
     template <typename G>
@@ -165,7 +172,16 @@ public:
         return state.t;
     }
 
+    size_t population_size() const { return n_pop; }
     size_t instances() const { return n_instances; }
+
+    std::pair<size_t,size_t> pop_to_species_id(size_t pop_id) const {
+        return std::pair<size_t,size_t>(pop_id%n_species,pop_id/n_species);
+    }
+
+    size_t species_to_pop_id(size_t species_id,size_t cell_id=0) const {
+        return cell_id*n_species+species_id;
+    }
 
     friend std::ostream &operator<<(std::ostream &O,const parallel_ssa &S) {
         O << S.ksys_set;
@@ -203,10 +219,6 @@ private:
 
     proc_system_set ksys_set;
     std::vector<instance_state> states;
-
-    size_t species_to_pop(size_t species_id,size_t cell_id) const {
-        return cell_id*n_species+species_id;
-    }
 };
 
 

@@ -198,25 +198,25 @@ struct emit_sim {
             #pragma omp critical
             {
                 batch_count_data.resize(offset+batch_sample_width);
-
-                for (size_t i=0; i<n_cells; ++i)
-                    for (size_t j=0; j<n_species; ++j)
-                        batch_count_data[offset++]=sim.count(instance,j,i);
+                sim.copy_counts(instance,&batch_count_data[offset]);
             }
         }
 	return O;
     }
 
-    std::ostream &flush(std::ostream &O) {
+    template <typename PSim>
+    std::ostream &flush(std::ostream &O, const PSim &sim) {
         if (!batch) return O;
 
         O << header;
         for (const auto &sample: batch_samples) {
             size_t offset=sample.count_data_offset;
-            for (size_t i=0; i<n_cells; ++i) {
-                O << sample.instance << ',' << sample.t << ',' << i;
-                for (size_t j=0; j<n_species; ++j)
-                    O << ',' << batch_count_data[offset++];
+            for (size_t i=0; i<batch_sample_width; ++i) {
+                auto sc=sim.pop_to_species_id(i);
+                O << sample.instance << ',' << sample.t << ','
+                  << sc.second << ',' << sc.first << ','
+                  << batch_count_data[offset++];
+
                 O << '\n';
             }
         }
@@ -344,10 +344,9 @@ int main(int argc, char **argv) {
             auto _(timer::guard(T));
             run_sim_by_time(S,emitter,A.t_end,A.sample_delta,A.verbosity>0);
         }
-        emitter.flush(std::cout);
+        emitter.flush(std::cout,S);
 
-        std::cout << "#---------------- \n";
-        std::cout << "#elapsed time: " << T.time()*1.0e9 << " [nano s] \n";
+        std::cerr << "#elapsed time: " << T.time()*1.0e9 << " [nano s] \n";
     }
     catch (usage_error &E) {
         std::cerr << basename << ": " << E.what() << "\n";

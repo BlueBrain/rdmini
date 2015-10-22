@@ -157,6 +157,12 @@ public:
 
     void set_count(size_t p,count_type c) { set_count(p,c,[](key_type) {}); }
 
+    // batched interface to population counts
+    template <typename Out>
+    void copy_counts(Out out) const {
+        std::copy(&pop_count[0], &pop_count[0]+n_pop, out);
+    }
+
     template <typename F>
     void apply(key_type k,F update_notify) {
         for (auto pd: proc_delta_tbl[k]) {

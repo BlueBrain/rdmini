@@ -1,13 +1,20 @@
 #ifndef TIMER_H_
 #define TIMER_H_
 
+#ifndef __PGI
 #include <atomic>
+#endif
+
 #include <chrono>
 
 namespace timer {
 
 inline void fence() {
+#ifndef __PGI
     std::atomic_thread_fence(std::memory_order_seq_cst);
+#else
+    __sync_synchronize();
+#endif
 }
 
 struct hr_timer {
