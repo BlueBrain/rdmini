@@ -218,7 +218,7 @@ private:
     // process to population delta map: constant per model (i.e. shareable)
     struct proc_delta {
         pop_index p; // which population
-        int32_t delta; // delta to apply
+        int32_t delta; // delta to apply e.g. +1, -1, 0 specific to the reaction and speco
     };
     typedef std::vector<proc_delta> proc_delta_entry;
     std::vector<proc_delta_entry> proc_delta_tbl;

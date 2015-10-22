@@ -43,7 +43,7 @@ public:
     }
 
     struct kproc_info {
-        std::vector<size_t> left_,right_;
+        std::vector<size_t> left_,right_; // lhs and rhs of the chemical recaion A + B = AB
         double rate_;
 
         const std::vector<size_t> &left() const { return left_; }
@@ -121,6 +121,7 @@ public:
         return ksys.count(species_to_pop(species_id,cell_id)); 
     }
 
+    // for time interval
     template <typename G>
     double advance(double t_end,G &g) {
         for (;;) {
@@ -135,6 +136,7 @@ public:
         return t;
     }
 
+    // for one exact step
     template <typename G>
     double advance(G &g) {
         get_next(g);
