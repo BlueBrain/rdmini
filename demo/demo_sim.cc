@@ -7,7 +7,7 @@
 
 #include "rdmini/timer.h"
 #include "rdmini/rdmodel.h"
-#include "rdmini/serial_ssa.h"
+#include "rdmini/parallel_ssa.h"
 #include "rdmini/rdmini_version.h"
 
 const char *demo_sim_version="0.0.1";
@@ -178,13 +178,13 @@ struct emit_sim {
         return batch?O:O << header;
     }
 
-    template <typename Sim>
-    std::ostream &emit_state(std::ostream &O, size_t instance, double t, const Sim &sim) {
+    template <typename PSim>
+    std::ostream &emit_state(std::ostream &O, size_t instance, double t, const PSim &sim) {
         if (!batch) {
             for (size_t i=0; i<n_cells; ++i) {
                 O << instance << ',' << t << ',' << i;
                 for (size_t j=0; j<n_species; ++j)
-                    O << ',' << sim.count(j,i);
+                    O << ',' << sim.count(instance,j,i);
                 O << '\n';
             }
         }
@@ -198,7 +198,7 @@ struct emit_sim {
 
             for (size_t i=0; i<n_cells; ++i)
                 for (size_t j=0; j<n_species; ++j)
-                    batch_count_data[offset++]=sim.count(j,i);
+                    batch_count_data[offset++]=sim.count(instance,j,i);
         }
 	return O;
     }
@@ -234,28 +234,36 @@ struct emit_sim {
     std::vector<size_t> batch_count_data;
 };
 
-void run_sim_by_steps(serial_ssa &S,emit_sim &emitter,size_t n,size_t dn,bool verbose) {
-    std::minstd_rand g;
+void run_sim_by_steps(parallel_ssa &S,emit_sim &emitter,size_t n,size_t dn,bool verbose) {
+    size_t N=S.instances();
 
-    double t;
-    for (size_t i=0; i<n; i+=dn) {
-        for (size_t j=0; j<dn; ++j)
-            t=S.advance(g);
+    for (size_t p=0; p<N; ++p) {
+        std::minstd_rand g(p);
 
-        emitter.emit_state(std::cout,1,t,S);
-        if (verbose) std::cout << S;
+        double t;
+        for (size_t i=0; i<n; i+=dn) {
+            for (size_t j=0; j<dn; ++j)
+                t=S.advance(p,g);
+
+            emitter.emit_state(std::cout,p,t,S);
+            if (verbose) std::cout << S;
+        }
     }
 }
 
-void run_sim_by_time(serial_ssa &S,emit_sim &emitter,double t_end,double dt,bool verbose) {
-    std::minstd_rand g;
+void run_sim_by_time(parallel_ssa &S,emit_sim &emitter,double t_end,double dt,bool verbose) {
+    size_t N=S.instances();
 
-    double t=0;
-    while (t<t_end) {
-        t=S.advance(t+dt,g);
+    for (size_t p=0; p<N; ++p) {
+        std::minstd_rand g(p);
 
-        emitter.emit_state(std::cout,1,t,S);
-        if (verbose) std::cout << S;
+        double t=0;
+        while (t<t_end) {
+            t=S.advance(p,t+dt,g);
+
+            emitter.emit_state(std::cout,p,t,S);
+            if (verbose) std::cout << S;
+        }
     }
 }
 
@@ -314,11 +322,13 @@ int main(int argc, char **argv) {
 
         // set up simulator
             
-        serial_ssa S(M,0);
+        parallel_ssa S(1,M,0);
 
         // emit initial state
 
-        emitter.emit_state(std::cout,1,0,S);
+        for (size_t i=0; i<A.n_instances; ++i)
+            emitter.emit_state(std::cout,i,0,S);
+
         if (A.verbosity) std::cout << S;
 
         // run simulation

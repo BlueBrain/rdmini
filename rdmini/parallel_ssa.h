@@ -16,7 +16,7 @@
 
 // TODO: split into .h and .cc if we've got fixed template parameters.
 
-struct serial_ssa {
+struct parallel_ssa {
 private:
     typedef ssa_pp_procsys_par<3> proc_system_set;
     typedef proc_system_set::instance_type proc_system;
@@ -38,10 +38,10 @@ public:
     static constexpr unsigned int max_participants=proc_system_set::max_participants;
     static constexpr unsigned int dynamic_range=32; // TODO: replace with correct value ...
 
-    serial_ssa(): t(0), stale(true) {}
+    parallel_ssa() {}
 
-    explicit serial_ssa(const rd_model &M, double t0=0) {
-        initialise(M,t0);
+    explicit parallel_ssa(size_t n_instances,const rd_model &M, double t0=0) {
+        initialise(n_instances,M,t0);
     }
 
     struct kproc_info {
@@ -53,9 +53,8 @@ public:
         double rate() const { return rate_; }
     };
 
-    void initialise(const rd_model &M, double t0) {
-        t=t0;
-        stale=true;
+    void initialise(size_t n_instances_,const rd_model &M, double t0) {
+        n_instances=n_instances_;
 
         n_species=M.n_species();
         n_reac=M.n_reactions();
@@ -96,93 +95,114 @@ public:
             }
         }
 
-        ksys_set=proc_system_set(1,n_pop,kp_set.begin(),kp_set.end());
+        ksys_set=proc_system_set(n_instances,n_pop,kp_set.begin(),kp_set.end());
 
-        ksys=ksys_set.instance(0);
-        ksel.reset(ksys.size());
+        states.resize(n_instances);
+        for (size_t i=0; i<n_instances; ++i) {
+            auto &state=states[i];
 
-        // initalise population counts
-        // (later, iterate over list of named cell lists for this)
-        for (size_t s_id=0; s_id<n_species; ++s_id) {
-            double conc=M.species[s_id].concentration;
-            for (size_t c_id=0; c_id<n_cell; ++c_id)
-                set_count(s_id,c_id, conc*M.cells[c_id].volume);
+            state.t=t0;
+            state.stale=true;
+
+            state.ksys=ksys_set.instance(i);
+            state.ksel.reset(state.ksys.size());
+
+            // initalise population counts
+            // (later, iterate over list of named cell lists for this)
+            for (size_t s_id=0; s_id<n_species; ++s_id) {
+                double conc=M.species[s_id].concentration;
+                for (size_t c_id=0; c_id<n_cell; ++c_id)
+                    state.ksys.set_count(species_to_pop(s_id,c_id),conc*M.cells[c_id].volume);
+            }
+
+            // initialise selector with propensities
+            for (proc_index_type k=0; k<state.ksys.size(); ++k)
+                state.ksel.update(k, state.ksys.propensity(k));
         }
-
-        // initialise selector with propensities
-        for (proc_index_type k=0; k<ksys.size(); ++k)
-            ksel.update(k, ksys.propensity(k));
     }
 
-    void set_count(size_t species_id,size_t cell_id,count_type count) {
-        ksel_update U(ksys,ksel);
-        ksys.set_count(species_to_pop(species_id,cell_id),count,U);
-        stale=true;
+    void set_count(size_t instance,size_t species_id,size_t cell_id,count_type count) {
+        auto &state=states[instance];
+        ksel_update U(state.ksys,state.ksel);
+
+        state.ksys.set_count(species_to_pop(species_id,cell_id),count,U);
+        state.stale=true;
     }
 
-    count_type count(size_t species_id,size_t cell_id) const {
-        return ksys.count(species_to_pop(species_id,cell_id)); 
+    count_type count(size_t instance,size_t species_id,size_t cell_id) const {
+        return states[instance].ksys.count(species_to_pop(species_id,cell_id)); 
     }
 
     template <typename G>
-    double advance(double t_end,G &g) {
+    double advance(size_t instance,double t_end,G &g) {
+        auto &state=states[instance];
+        ksel_update U(state.ksys,state.ksel);
+
         for (;;) {
-            get_next(g);
-            if (t+next.dt>t_end) break;
+            state.get_next(g);
+            if (state.t+state.next_dt>t_end) break;
 
-            advance(g);
+            state.ksys.apply(state.next_k_id,U);
+            state.t+=state.next_dt;
+            state.stale=true;
         }
 
-        next.dt-=t_end-t;
-        t=t_end;
-        return t;
+        state.next_dt-=t_end-state.t;
+        state.t=t_end;
+        return state.t;
     }
 
     template <typename G>
-    double advance(G &g) {
-        ksel_update U(ksys,ksel);
+    double advance(size_t instance,G &g) {
+        auto &state=states[instance];
+        ksel_update U(state.ksys,state.ksel);
 
-        get_next(g);
-        ksys.apply(next.k_id,U);
+        state.get_next(g);
+        state.ksys.apply(state.next_k_id,U);
+        state.t+=state.next_dt;
+        state.stale=true;
 
-        t+=next.dt;
-        stale=true;
-
-        return t;
+        return state.t;
     }
 
-    friend std::ostream &operator<<(std::ostream &O,const serial_ssa &S) {
-        O << S.ksys;
-        // O << S.ksel;
+    size_t instances() const { return n_instances; }
+
+    friend std::ostream &operator<<(std::ostream &O,const parallel_ssa &S) {
+        O << S.ksys_set;
         return O;
     }
         
 private:
-    template <typename G> 
-    void get_next(G &g) {
-        if (stale) {
-            auto ev=ksel.next(g);
-            next={ev.key(), ev.dt()};
-        }
-        stale=false;
-    }
-
+    size_t n_instances;
     size_t n_species;
     size_t n_reac;
     size_t n_cell;
     size_t n_pop;
 
-    double t; // sim time...
-    struct {
-        proc_index_type k_id;
-        double dt;
-    } next;
 
-    bool stale; // true => need to re-poll ksel
+    struct instance_state {
+        double t;
+        proc_system ksys;
+        ssa_selector ksel;
+
+        bool stale;
+        proc_index_type next_k_id;
+        double next_dt;
+
+        template <typename G> 
+        void get_next(G &g) {
+            if (stale) {
+                auto ev=ksel.next(g);
+                next_k_id=ev.key();
+                next_dt=ev.dt();
+            }
+
+            stale=false;
+        }
+    };
 
     proc_system_set ksys_set;
-    proc_system ksys;
-    ssa_selector ksel;
+    std::vector<instance_state> states;
 
     size_t species_to_pop(size_t species_id,size_t cell_id) const {
         return cell_id*n_species+species_id;
