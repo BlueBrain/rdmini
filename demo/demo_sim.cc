@@ -237,8 +237,9 @@ struct emit_sim {
 void run_sim_by_steps(parallel_ssa &S,emit_sim &emitter,size_t n,size_t dn,bool verbose) {
     size_t N=S.instances();
 
+    #pragma omp parallel for
     for (size_t p=0; p<N; ++p) {
-        std::minstd_rand g(p);
+        std::minstd_rand g(p*20000);
 
         double t;
         for (size_t i=0; i<n; i+=dn) {
@@ -254,8 +255,9 @@ void run_sim_by_steps(parallel_ssa &S,emit_sim &emitter,size_t n,size_t dn,bool 
 void run_sim_by_time(parallel_ssa &S,emit_sim &emitter,double t_end,double dt,bool verbose) {
     size_t N=S.instances();
 
+    #pragma omp parallel for
     for (size_t p=0; p<N; ++p) {
-        std::minstd_rand g(p);
+        std::minstd_rand g(p*20000); // fix this seeding stuff
 
         double t=0;
         while (t<t_end) {
@@ -322,7 +324,7 @@ int main(int argc, char **argv) {
 
         // set up simulator
             
-        parallel_ssa S(1,M,0);
+        parallel_ssa S(A.n_instances,M,0);
 
         // emit initial state
 

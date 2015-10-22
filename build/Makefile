@@ -19,6 +19,7 @@ CXX = g++
 CFLAGS = $(OPTFLAGS)
 CXXFLAGS = -std=c++11 $(OPTFLAGS) -fopenmp
 CXXFLAGS += -MMD -MP  # auto-generate dependencies
+LDFLAGS += -fopenmp
 else ifeq "$(COMPILER)" "clang"
 # clang, clang++
 CC = clang
@@ -26,11 +27,13 @@ CXX = clang++
 CFLAGS = $(OPTFLAGS)
 CXXFLAGS = -std=c++11 $(OPTFLAGS) -fopenmp -Wno-logical-op-parentheses
 CXXFLAGS += -MMD -MP  # auto-generate dependencies
+LDFLAGS += -fopenmp
 # pgc, pgc++
 else ifeq "$(COMPILER)" "pgi"
 CC = pgcc
 CXX = pgc++
 CXXFLAGS = -std=c++11 $(OPTFLAGS) -mp
+LDFLAGS += -mp -lpthread
 MAKEDEPEND := 1 # dependency generation doesn't handle directory in -o
 else ifeq "$(COMPILER)" "cray"
 CC = cc
