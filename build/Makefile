@@ -49,7 +49,7 @@ endif
 
 demos := demo_parse demo_ssa_direct demo_sim demo_timer_test
 #demos := demo_parse demo_ssa_direct
-tests := test_dummy
+tests := test_dummy test_modelspec test_modelspecYaml
 benches := 
 docs := simapi.html
 
@@ -160,6 +160,7 @@ clean:
 
 realclean: clean
 	rm -f $(docs) $(demos) $(tests) $(benches) libgtestmain.a libyaml.a obj/*.d obj/yaml/*.d 
-	
 
-
+# test
+test: 
+	for file in $(tests); do ./$$file ; done

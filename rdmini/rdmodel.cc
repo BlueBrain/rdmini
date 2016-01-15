@@ -1,6 +1,8 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
+//#include <assert.h>
+#include <limits>
 
 #include "rdmini/rdmodel.h"
 #include "rdmini/yamlview.h"
@@ -83,6 +85,13 @@ static void parse_species(rd_model &M,const yaml_node_view &S) {
         if (conc) conc_value=std::stod(conc.str());
 
         species_info species={name,diff_value,conc_value};
+        if (species.diffusivity<std::numeric_limits<double>::epsilon()) 
+          throw model_incorrectBiologicalValue_error("Value of diffusivity is negative");
+        if (species.concentration<std::numeric_limits<double>::epsilon()) 
+          throw model_incorrectBiologicalValue_error("Value of concentration is negative");
+        //assert(species.diffusivity<std::numeric_limits<double>::epsilon());
+        //assert(species.concentration<std::numeric_limits<double>::epsilon());
+
         M.species.insert(species);
     }
     catch (yaml_error &error) {
@@ -125,6 +134,10 @@ static void parse_reaction(rd_model &M,const yaml_node_view &R) {
     std::multiset<int> right=parse_species_list(M,R["right"]);
 
     reaction_info reaction={name,left,right,rate};
+    //assert(reaction.rate<std::numeric_limits<double>::epsilon());
+    if (reaction.rate<std::numeric_limits<double>::epsilon()) 
+          throw model_incorrectBiologicalValue_error("Value of reaction rate is negative");
+
     M.reactions.insert(reaction);
 
     if (rate_node.size()>1) {
@@ -153,6 +166,9 @@ static void parse_cells_wmvol(rd_model &M,const yaml_node_view &e) {
         size_t c0=M.cells.size();
 
         cell_info ci={std::stod(e["volume"].str())};
+        if (ci.volume<std::numeric_limits<double>::epsilon()) 
+          throw model_incorrectBiologicalValue_error("Value of volume is negative");
+//        assert(ci.volume<std::numeric_limits<double>::epsilon());
         M.cells.push_back(ci);
 
         cell_set cs={name,{c0}};
