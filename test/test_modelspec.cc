@@ -33,6 +33,7 @@ class rdmini : public ::testing::Test
     rd_model schnakenbergModl;
     species_info specyA, specyB;
     reaction_info reactionA;
+    ModlValid validation;
 };
 
 
@@ -66,6 +67,14 @@ TEST_F(rdmini,addSpecy) {
     ASSERT_STREQ(schnakenbergModl.species[index].name.c_str(),"C");
     ASSERT_DOUBLE_EQ(0.05,schnakenbergModl.species[index].diffusivity);
     ASSERT_DOUBLE_EQ(15.0,schnakenbergModl.species[index].concentration); 
+
+    species_info specyD={"D",-0.05,15.0};
+    ASSERT_TRUE(!specyD.isModlValid());
+    species_info specyE={"E",0.05,-15.0};
+    ASSERT_TRUE(!specyE.isModlValid());
+
+    ASSERT_THROW(validation(specyD.isModlValid()), model_incorrectBiologicalValue_error); 
+    
 }
 
 TEST_F(rdmini,addReaction) {
@@ -87,7 +96,7 @@ TEST_F(rdmini,addReaction) {
     ASSERT_DOUBLE_EQ(10, schnakenbergModl.reactions[index].rate);
     ASSERT_TRUE( schnakenbergModl.reactions[index].left.size()==3);
     ASSERT_TRUE( schnakenbergModl.reactions[index].right.size()==4);  
-    
+
     /// Check for reaction values
 /*    std::multiset<int>::value_compare comparison = right.value_comp();
     std::multiset<int>::iterator it = right.begin();

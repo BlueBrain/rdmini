@@ -84,7 +84,7 @@ static void parse_species(rd_model &M,const yaml_node_view &S) {
         yaml_node_view conc=S["concentration"];
         if (conc) conc_value=std::stod(conc.str());
 
-        species_info species={name,diff_value,conc_value};
+        species_info species{name,diff_value,conc_value};
         if (species.diffusivity<std::numeric_limits<double>::epsilon()) 
           throw model_incorrectBiologicalValue_error("Value of diffusivity is negative");
         if (species.concentration<std::numeric_limits<double>::epsilon()) 
