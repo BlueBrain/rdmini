@@ -49,7 +49,7 @@ endif
 
 demos := demo_parse demo_ssa_direct demo_sim demo_timer_test
 #demos := demo_parse demo_ssa_direct
-tests := test_dummy test_modelspec test_modelspecYaml
+tests := test_dummy test_modelspec test_modelspecYaml test_ssaapi
 benches := 
 docs := simapi.html
 

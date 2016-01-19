@@ -6,7 +6,7 @@
 #include <gtest/gtest.h>
 #include "rdmini/rdmodel.h"
 
-class modelspec : public ::testing::Test
+class ssa : public ::testing::Test
 {
     protected:
 
@@ -37,11 +37,11 @@ class modelspec : public ::testing::Test
 };
 
 
-TEST_F(modelspec,initialTest) {
+TEST_F(ssa,initialTest) {
     ASSERT_TRUE(true);
 }
 
-TEST_F(modelspec,initialSpecification) {
+TEST_F(ssa,initialSpecification) {
    /// This model is partially defined in the test header 
     ASSERT_TRUE(!schnakenbergModl.species.empty());
     ASSERT_TRUE(schnakenbergModl.n_species()==2);
@@ -50,7 +50,7 @@ TEST_F(modelspec,initialSpecification) {
 }
 
 
-TEST_F(modelspec,addSpecy) {
+TEST_F(ssa,addSpecy) {
     /// Completing model specification
     // Adding specy which does not exist
     species_info specyC={"C",0.05,15.0}; 
@@ -77,7 +77,7 @@ TEST_F(modelspec,addSpecy) {
     
 }
 
-TEST_F(modelspec,addReaction) {
+TEST_F(ssa,addReaction) {
     /// Adding regular reaction
     std::multiset<int> left = {1,1,2};
     std::multiset<int> right = {1,1,5,-5};
@@ -104,23 +104,6 @@ TEST_F(modelspec,addReaction) {
         std::cout << ' ' << *it;
     } while (mycomp(*it++, */
 }
-
-/*
-TEST(modelspec,reactions) {
-
-
-}
-
-TEST(modelspec,cell) {
-
-}
-
-
-TEST(modelspec,model) {
-
-
-}
-*/
 
 
 
