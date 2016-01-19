@@ -33,7 +33,7 @@ class rdmini : public ::testing::Test
     rd_model schnakenbergModl;
     species_info specyA, specyB;
     reaction_info reactionA;
-    ModlValid validation;
+    throwInvalidModl validation;
 };
 
 
