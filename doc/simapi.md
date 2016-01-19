@@ -17,6 +17,12 @@ Derives from `std::runtime_error`
 Implementations are not obliged to perform range checking; should they do so, however,
 they must throw this exception when a supplied value is invalid.
 
+### `rdmini::ssa_error`
+
+Derives from `std::runtime_error`
+
+Represents an internal error in an SSA implementation.
+
 # Simulator engine interface
 
 Any instance `s` of a simulator implementation `S` should provide the following interface to callers.

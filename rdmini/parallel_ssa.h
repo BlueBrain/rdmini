@@ -9,7 +9,7 @@
 
 #include "rdmini/iterspan.h"
 #include "rdmini/rdmodel.h"
-#include "rdmini/ssa_common.h"
+#include "rdmini/exceptions.h"
 #include "rdmini/ssa_direct.h"
 
 #include "rdmini/ssa_pp_procsys_par.h"
