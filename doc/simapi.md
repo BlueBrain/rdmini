@@ -1,3 +1,22 @@
+# Conventions and exceptions
+
+## Exceptions
+
+### `rdmini::operation_not_supported`
+
+Derives from `std::logic_error`
+
+Some operations described in the API below may be optional, in that they may not be practical
+to support in every implementation, and are not crucial in providing SSA functionality. Such
+operations may thus instead throw an exception of this type.
+
+### `rdmini::invalid_value`
+
+Derives from `std::runtime_error`
+
+Implementations are not obliged to perform range checking; should they do so, however,
+they must throw this exception when a supplied value is invalid.
+
 # Simulator engine interface
 
 Any instance `s` of a simulator implementation `S` should provide the following interface to callers.
@@ -33,7 +52,7 @@ expression | return type | description
 
 # SSA selector implementations
 
-For an SSA selector of type `A`, instance `a`, and uniform integral random generator `g`.
+Let `A` denote a class implementing the SSA selector API.
 
 ## Types
 
@@ -46,21 +65,25 @@ name | type | description
 
 ## Methods
 
-Here `n` is an unsigned integral type, `k` is of type `A::key_type`, `r` is of type
-`A::value_type`, `ev` is a generated event of type `A::event_type`.
+In the following let `a` be an instance of `A`, `ac` a const instance of `A`,
+`g` a uniform random number generator (see section [rand.req.urng] in C++ standard),
+`n` an unsigned integral value, `k` a value of type `A::key_type`, `r` a value of type
+`A::value_type`, and `ev` an event of type `A::event_type` returned by the
+`next` method.
 
 expression | return type | description
 -----------|-------------|------------
 `a.reset(n)` | | initialise state to represent `n` processes, with initially zero propensity
-`a.size()`   | unsigned integral type | Total number of represented processes
-`a.update(k,r)` | | set propensity of process `k` to `r`
+`a.update(k,r)` | | set propensity of process `k` to `r`; may throw `rdmini::invalid_value`
+`ac.size()`   | unsigned integral type | total number of represented processes
+`ac.propensity(k)` | `A::value_type` | *[optional]* retrieve propensity of process `k`; may throw `rdmini::invalid_value`
+`ac.total_propensity()` | `A::value_type` | *[optional]* retrieve propensity of process `k`; may throw `rdmini::invalid_value`
 `a.next(g)` | `A::event_type` | generate next event drawing uniformly distributed numbers from `g`
 `ev.key()`  | `A::key_type` | identifier of process in event
 `ev.dt()`   | floating point type | event time delta
 
-In practice, `A::key_type` should probably be an unsigned integral type, taking
+In practice, `A::key_type` should generally be an unsigned integral type, taking
 values from the range [0, `a.size()`).
-
 
 # SSA process system implementation
 
