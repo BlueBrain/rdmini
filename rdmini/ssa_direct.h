@@ -62,6 +62,13 @@ struct ssa_direct {
         p=r;
     }
 
+    void get_propensity(std::vector<value_type> &prop)
+    {
+        prop=propensity;
+    }
+
+    value_type get_total() { return total; };
+
 private:
     size_t n_key;
     std::exponential_distribution<value_type> E;
