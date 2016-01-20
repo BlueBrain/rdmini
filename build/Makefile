@@ -105,6 +105,7 @@ obj/demo_%.o: demo/demo_%.cc
 GTEST_CPPFLAGS=-isystem $(GTEST_DIR)/include
 
 test_sources := $(wildcard $(top)/test/test_*.cc)
+test_executables := $(patsubst %.cc,%,$(notdir $(test_sources)))
 
 test_%: obj/test_%.o $(rdmini_objects) $(yaml_lib) libgtestmain.a
 	$(CXX) -o $@ $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS)
@@ -161,6 +162,7 @@ clean:
 realclean: clean
 	rm -f $(docs) $(demos) $(tests) $(benches) libgtestmain.a libyaml.a obj/*.d obj/yaml/*.d 
 
-# test
-test: 
+# run tests
+
+test: $(test_executables)
 	for file in $(tests); do ./$$file ; done

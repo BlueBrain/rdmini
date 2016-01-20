@@ -3,12 +3,12 @@
 
 #include <random>
 
-#include "rdmini/ssa_common.h"
+#include "rdmini/exceptions.h"
 
 /** Implementation of 'direct' SSA method. */
 
 // KeyType must be unsigned integral
-// ValueType must be floatint point
+// ValueType must be floating point
 
 template <typename KeyType,typename ValueType>
 struct ssa_direct {
@@ -41,10 +41,10 @@ struct ssa_direct {
 
         key_type i=0;
         for (i=0; i<n_key; ++i) {
-            x-=propensity[i];
+            x-=propensities[i];
             if (x<0) break;
         }
-        if (i>=n_key) throw ssa_error("fell off propensity ladder (rounding?)");
+        if (i>=n_key) throw rdmini::ssa_error("fell off propensity ladder (rounding?)");
 
         double dt=E(g)/total;
         return event_type{i,dt};
@@ -52,27 +52,24 @@ struct ssa_direct {
 
     void reset(size_t n_key_) {
         n_key=n_key_;
-        propensity.assign(n_key,0.0);
+        propensities.assign(n_key,0.0);
         total=0.0;
     }
 
     void update(key_type k,value_type r) {
-        value_type &p=propensity[k];
+        value_type &p=propensities[k];
         total+=r-p;
         p=r;
     }
 
-    void get_propensity(std::vector<value_type> &prop)
-    {
-        prop=propensity;
-    }
+    value_type propensity(key_type k) const { return propensities[k]; }
 
-    value_type get_total() { return total; };
+    value_type total_propensity() const { return total; };
 
 private:
     size_t n_key;
     std::exponential_distribution<value_type> E;
-    std::vector<value_type> propensity;
+    std::vector<value_type> propensities;
     value_type total;
 };
 
