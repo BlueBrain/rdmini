@@ -134,9 +134,13 @@ libgtestmain.a: obj/gtest-all.o obj/gtest_main.o
 
 doc: $(docs)
 
-csl-stylesheet = $(top)/doc/apa-5th-edition.csl
-%.html: $(top)/doc/%.md $(csl-stylesheet)
-	pandoc -t html $< --filter pandoc-citeproc -o $@
+csl-stylesheet = $(top)/doc/style.csl
+
+style.csl: $(csl-stylesheet)
+	cp $< $@
+
+%.html: $(top)/doc/%.md style.csl
+	pandoc -s -t html $< --filter pandoc-citeproc -o $@
 
 # dependencies
 
@@ -157,7 +161,7 @@ endif
 # clean
 
 clean:
-	rm -f gtest-all.o gtest_main.o obj/*.o obj/yaml/*.o obj/*.d.bak
+	rm -f gtest-all.o gtest_main.o obj/*.o obj/yaml/*.o obj/*.d.bak style.csl
 
 realclean: clean
 	rm -f $(docs) $(demos) $(tests) $(benches) libgtestmain.a libyaml.a obj/*.d obj/yaml/*.d 

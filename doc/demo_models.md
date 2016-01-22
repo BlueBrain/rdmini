@@ -138,5 +138,5 @@ references:
   page: 37–72
   DOI: 10.1098/rstb.1952.0012
 link-citations: true
-citation-style: apa-5th-edition.csl
+citation-style: style.csl
 ...
