@@ -7,7 +7,7 @@ Note that the units of the quantities expressed in the models file are in counts
 and seconds; this leads to some very large or small quantities for typical cell volumes,
 such as the 25 µm^3 cells used in the Turing example below. This problem will be
 addressed in a future revision that includes general unit support. For single well-mixed
-volume simulations, a 'unit' volume allows rate constants to be considered to be in s^-1^.
+volume simulations, a 'unit' volume allows rate constants to be considered to be in s<sup>-1</sup>.
 
 
 ## Schnakenberg
@@ -21,9 +21,9 @@ deterministic system of ODEs.
 
 |                  |                                            |
 |------------------|--------------------------------------------|
-| 2*A* + *B* → 3*A* | &#x2001; *k*~1~=4×10^-5^ s^-1^             |
-| ∅ ⇄ *A*           | &#x2001; *k*~2~=40 s^-1^,  *k*~3~=10 s^-1^ |
-| ∅ → *B*           | &#x2001; *k*~4~=25 s^-1^                   |
+| 2*A* + *B* → 3*A* | &#x2001; *k*<sub>1</sub>=4×10<sup>-5</sup> s<sup>-1</sup>             |
+| ∅ ⇄ *A*           | &#x2001; *k*<sub>2</sub>=40 s<sup>-1</sup>,  *k*<sub>3</sub>=10 s<sup>-1</sup> |
+| ∅ → *B*           | &#x2001; *k*<sub>4</sub>=25 s<sup>-1</sup>                   |
 
 **Initial conditions**
 
@@ -43,8 +43,8 @@ simulation demonstrates spontaneous transition between these two states.
 
 |            |                                                     |
 |------------|-----------------------------------------------------|
-| 2*A* ⇄ 3*A* | &#x2001; *k*~1~=0.18 s^-1^, *k*~2~=2.5×10^-4^ s^-1^ |
-| ∅ ⇄ *A*     | &#x2001; *k*~3~=2200 s^-1^, *k*~4~=37.5 s^-1^       |
+| 2*A* ⇄ 3*A* | &#x2001; *k*<sub>1</sub>=0.18 s<sup>-1</sup>, *k*<sub>2</sub>=2.5×10<sup>-4</sup> s<sup>-1</sup> |
+| ∅ ⇄ *A*     | &#x2001; *k*<sub>3</sub>=2200 s<sup>-1</sup>, *k*<sub>4</sub>=37.5 s<sup>-1</sup>       |
 
 Note that this description has rescaled the reaction constants from per-minute
 quantities to per-second quantities.
@@ -63,24 +63,24 @@ uses the Schnakenberg reaction system with rate constants described below, on a
 1-D mesh of length 1 mm, divided into 40 equal sized compartments.
 
 Note that the description in the paper expresses concentrations as counts per
-mesh element; the model implementation has 40 cells each of volume 25 µm^3^,
+mesh element; the model implementation has 40 cells each of volume 25 µm<sup>3</sup>,
 and the reaction rates below have been scaled accordingly.
 
 **Reaction system**
 
 |                  |                                                      |
 |------------------|------------------------------------------------------|
-| 2*A* + *B* → 3*A* | &#x2001; *k*~1~=6.25×10^-4^ µm^6^s^-1^               |
-| ∅ ⇄ *A*           | &#x2001; *k*~2~=0.04 µm^3^·s^-1^,  *k*~3~=0.02 s^-1^ |
-| ∅ → *B*           | &#x2001; *k*~4~=0.12 µm^3^·s^-1^                     |
+| 2*A* + *B* → 3*A* | &#x2001; *k*<sub>1</sub>=6.25×10<sup>-4</sup> µm<sup>6</sup>s<sup>-1</sup>               |
+| ∅ ⇄ *A*           | &#x2001; *k*<sub>2</sub>=0.04 µm<sup>3</sup>·s<sup>-1</sup>,  *k*<sub>3</sub>=0.02 s<sup>-1</sup> |
+| ∅ → *B*           | &#x2001; *k*<sub>4</sub>=0.12 µm<sup>3</sup>·s<sup>-1</sup>                     |
 
 
 **Diffusion coefficients**
 
 |     |                    |
 |-----|--------------------|
-| *A*: | 10^-5^ mm^2^·s^-1^ |
-| *B*: | 10^-3^ mm^2^·s^-1^ |
+| *A*: | 10<sup>-5</sup> mm<sup>2</sup>·s<sup>-1</sup> |
+| *B*: | 10<sup>-3</sup> mm<sup>2</sup>·s<sup>-1</sup> |
 
 
 
@@ -89,6 +89,10 @@ and the reaction rates below have been scaled accordingly.
 ## References
 
 ---
+author:
+- name: Sam Yates
+  affiliation: Blue Brain Project, EPFL
+
 references:
 - id: schnakenberg79
   type: article-journal
@@ -137,6 +141,8 @@ references:
   issued: { year: 1952 }
   page: 37–72
   DOI: 10.1098/rstb.1952.0012
+
 link-citations: true
+
 citation-style: style.csl
 ...
