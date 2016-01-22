@@ -192,7 +192,7 @@ public:
         O << "proc_propensity_tbl:\n";
         for (size_t idx=0; idx<sys.n_proc; ++idx) {
             const auto &e=sys.proc_propensity_tbl[idx];
-            O << "    " << std::setw(6) << std::right << idx++ << ":";
+            O << "    " << std::setw(6) << std::right << idx << ":";
             O << " rate=" << std::left << std::setw(10) << e.rate;
             O << " counts:";
             for (const auto &c: e.counts) 
@@ -297,6 +297,8 @@ public:
                   << std::showpos << pd.delta << std::noshowpos;
             O << "\n";
         }
+        // const cheating for debugging -- TODO: make a better interface!
+        O << "instance 0:\n" << const_cast<ssa_pp_procsys_par &>(sys).instance(0) << "\n";
         return O;
     }
 

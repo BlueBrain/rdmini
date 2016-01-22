@@ -2,6 +2,7 @@
 #define SSA_PP_PROCSYS_H_
 
 #include <cstdint>
+#include <cmath>
 #include <vector>
 #include <array>
 #include <map>

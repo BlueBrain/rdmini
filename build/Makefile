@@ -48,10 +48,9 @@ endif
 # main targets
 
 demos := demo_parse demo_ssa_direct demo_sim demo_timer_test
-#demos := demo_parse demo_ssa_direct
 tests := test_dummy
 benches := 
-docs := simapi.html
+docs := simapi.html demo_models.html
 
 all: $(demos) $(tests) $(benches)
 
@@ -134,8 +133,9 @@ libgtestmain.a: obj/gtest-all.o obj/gtest_main.o
 
 doc: $(docs)
 
-%.html: $(top)/doc/%.md
-	pandoc -t html $^ -o $@
+csl-stylesheet = $(top)/doc/apa-5th-edition.csl
+%.html: $(top)/doc/%.md $(csl-stylesheet)
+	pandoc -t html $< --filter pandoc-citeproc -o $@
 
 # dependencies
 
