@@ -50,7 +50,7 @@ endif
 demos := demo_parse demo_ssa_direct demo_sim demo_timer_test
 tests := test_dummy test_modelspec test_modelspecYaml test_ssaapi
 benches := 
-docs := simapi.html demo_models.html
+docs := simapi.html demo_models.html invariants.html
 
 all: $(demos) $(tests) $(benches)
 

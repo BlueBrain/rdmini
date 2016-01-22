@@ -12,14 +12,16 @@ Classes which offer a validity test should provide a public method
 
     X is_valid() const
 
-with a return value that converts implicitly to `bool`, giving false if and only if the validation check fails. The return value may contain additional information, depending on the type.
+with a return value that converts implicitly to `bool`, giving false if and
+only if the validation check fails. The return value may contain additional
+information, depending on the type.
 
 
 ## The `check_valid.h` header
 
 This header provides convenience members for classes with `is_valid()` checks, and
-additionally defines macros `SOURCE_LOCATION` (a string literal) and
-`SOURCE_LINE_FUNC` (an expression of type `const char *`) which expand to the
+additionally defines macros `SOURCE_LINE` (a string literal) and
+`SOURCE_LINE_FUNC` (a temporary value of type `const char *`) which expand to the
 current source file and line number, or file, line number and function name
 respectively.
 
@@ -35,7 +37,7 @@ A class `T` deriving from `check_valid<T>` provides additional member functions:
 
 The first two will throw an exception of type `rdmini::validation_error` if
 `is_valid()` returns false; if no message is explicitly given, and the return
-type of `is_valid` has a member function with signature `R message() const` with return type
+type of `is_valid` has a member function with signature `R what() const` with return type
 `R` convertible to `std::string`, this message is used to construct the
 `validation_error` exception.
 
@@ -53,17 +55,23 @@ which will perform validity checks on the supplied object or object pointer at
 construction and also when the guard falls out of scope (i.e. is destroyed.)
 
 `check_valid_guard` will throw a `rdmini::validation_failure` exception on check
-failure, or will optionally throw an exception provided by the user as a second
-parameter.
+failure. 
 
 `assert_valid_guard` will perform no checks if `NDEBUG` is defined, but otherwise
 will print a message to `stderr` and abort if the check fails.
+
+There currently is no implementation of a `check_valid_guard_ex` analagous to
+`check_valid_ex` above, but one could be implemented with the caveat that in general,
+the exception object would need to be constructed (but not thrown) even if the
+validation checks pass.
 
 Example usage:
 
     struct my_class {
 	void foo() {
-	    auto guard=assert_valid_guard(this);
+	    // abort if is_valid() returns false at beginning or end
+            // of the methos.
+	    auto _(assert_valid_guard(this));
 
 	    unsafe_operation();
             // ...
@@ -81,14 +89,8 @@ Example usage:
 
     void bar(my_class &x) {
 	// throw if x is invalid at beginning or end of bar()
-	auto guard=check_valid_guard(x);
+	auto _(check_valid_guard(x));
 
 	x.unsafe_operation();
     }
 
-    void quux(my_class &x) {
-	// throw runtime error if x is invalid at beginning or end of quux()
-	auto guard=check_valid_guard(x,std::runtime_error("x failed validity check"));
-
-	x.unsafe_operation();
-    }
