@@ -13,6 +13,10 @@ struct model_io_error: std::runtime_error {
     model_io_error(const std::string &what_arg): std::runtime_error(what_arg) {}
 };
 
+struct model_invalid_error: std::runtime_error {
+    model_invalid_error(const std::string &what_arg): std::runtime_error(what_arg) {}
+};
+
 struct species_info: rdmini::check_valid_api<species_info> { 
     std::string name;
     double diffusivity=0;

@@ -95,7 +95,7 @@ static void parse_species(rd_model &M,const yaml_node_view &S) {
         throw model_io_error("parsing species failure: "+error.where());
     }
     catch (validation_failure &error) {
-        throw model_io_error("parsing species failure: "+std::string(error.what()));
+        throw model_invalid_error(error.what());
     }
 }
 
@@ -151,7 +151,7 @@ static void parse_reaction(rd_model &M,const yaml_node_view &R) {
         throw model_io_error("parsing reaction failure: "+error.where());
     }
     catch (validation_failure &error) {
-        throw model_io_error("parsing reaction failure: "+std::string(error.what()));
+        throw model_invalid_error(error.what());
     }
 }
 
@@ -184,7 +184,7 @@ static void parse_cells_wmvol(rd_model &M,const yaml_node_view &e) {
         throw model_io_error("parsing cells wmvol failure: "+e.where());
     }
     catch (validation_failure &error) {
-        throw model_io_error("parsing cells wmvol failure: "+std::string(error.what()));
+        throw model_invalid_error(error.what());
     }
 }
 
