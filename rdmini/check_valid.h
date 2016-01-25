@@ -41,7 +41,8 @@ namespace impl {
     template <typename B>
     struct check_valid_guard_type {
         check_valid_guard_type(const B &me_): me(me_) {
-            if (!me->is_valid()) throw validation_failure();
+            auto v=me->is_valid();
+            if (!v) throw validation_failure();
         }
 
         ~check_valid_guard_type() noexcept(false) {

@@ -34,8 +34,9 @@ A class `T` deriving from `check_valid<T>` provides additional member functions:
     void check_valid_ex(Args &&... args) const;
 
 The first two will throw an exception of type `rdmini::validation_error` if
-`is_valid()` returns false; if no message is explicitly given, and the return
-type of `is_valid` has a member function with signature `R message() const` with return type
+`is_valid()` returns a value that implicity converts to false; if no message is
+explicitly given, and the return
+type of `is_valid` has a member function with signature `R what() const` with return type
 `R` convertible to `std::string`, this message is used to construct the
 `validation_error` exception.
 
