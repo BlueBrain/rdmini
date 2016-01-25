@@ -60,13 +60,11 @@ TEST_F(ssa,initialSpecification) {
     }
     
     /// Verifying value of propensities stored
-    std::vector<double> prop;
-    ssa_solver.get_propensity(prop);
     for (size_t i=0; i<prop_size; ++i)
-        ASSERT_TRUE(prop[i]==propensities[i]);
+        ASSERT_TRUE(ssa_solver.propensity(i)==propensities[i]);
 
     /// Verifying update of value
-    ASSERT_DOUBLE_EQ(ssa_solver.get_total(), total);
+    ASSERT_DOUBLE_EQ(ssa_solver.total_propensity(), total);
 }
 
 

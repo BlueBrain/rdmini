@@ -9,7 +9,7 @@
 
 #include "rdmini/iterspan.h"
 #include "rdmini/rdmodel.h"
-#include "rdmini/ssa_common.h"
+#include "rdmini/exceptions.h"
 #include "rdmini/ssa_direct.h"
 
 #include "rdmini/ssa_pp_procsys_par.h"
@@ -69,7 +69,8 @@ public:
             double vol=M.cells[c_id].volume;
             for (const auto &reac: M.reactions) {
                 kproc_info ki;
-                ki.rate_=reac.rate/vol;
+                int order=(int)reac.left.size();
+                ki.rate_=reac.rate*std::pow(vol,1-order);
                 for (size_t s_id: reac.left) ki.left_.push_back(species_to_pop_id(s_id,c_id));
                 for (size_t s_id: reac.right) ki.right_.push_back(species_to_pop_id(s_id,c_id));
             

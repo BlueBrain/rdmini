@@ -13,7 +13,7 @@
 
 #include "rdmini/iterspan.h"
 #include "rdmini/rdmodel.h"
-#include "rdmini/ssa_common.h"
+#include "rdmini/exceptions.h"
 
 /** SSA process system that maintains process dependencies
  * factored through populations, and computes propensities
@@ -192,7 +192,7 @@ public:
         O << "proc_propensity_tbl:\n";
         for (size_t idx=0; idx<sys.n_proc; ++idx) {
             const auto &e=sys.proc_propensity_tbl[idx];
-            O << "    " << std::setw(6) << std::right << idx++ << ":";
+            O << "    " << std::setw(6) << std::right << idx << ":";
             O << " rate=" << std::left << std::setw(10) << e.rate;
             O << " counts:";
             for (const auto &c: e.counts) 
@@ -248,7 +248,7 @@ public:
     template <typename In>
     ssa_pp_procsys_par(size_t n_instance_, size_t n_pop_, In b, In e): n_instance(n_instance_), n_pop(n_pop_), n_proc(0) {
         if (n_pop_>0 && n_pop_-1>max_population_index)
-            throw ssa_error("population index out of bounds");
+            throw rdmini::invalid_value("population index out of bounds");
 
         pop_count_instances.assign(n_instance,std::vector<count_type>(n_pop,0));
         pop_contribs_tbl.resize(n_pop);
@@ -297,6 +297,8 @@ public:
                   << std::showpos << pd.delta << std::noshowpos;
             O << "\n";
         }
+        // const cheating for debugging -- TODO: make a better interface!
+        O << "instance 0:\n" << const_cast<ssa_pp_procsys_par &>(sys).instance(0) << "\n";
         return O;
     }
 
@@ -309,7 +311,7 @@ private:
     template <typename Proc>
     void add_proc(const Proc &proc, std::vector<pp_entry> &proc_propensity_tbl) {
         if (n_proc>=std::numeric_limits<key_type>::max())
-            throw ssa_error("process index out of bounds");
+            throw rdmini::invalid_value("process index out of bounds");
 
         key_type key=n_proc++;
 
@@ -319,12 +321,12 @@ private:
         std::vector<pop_index> left_sorted;
         std::map<pop_index,count_type> delta_map;
         for (auto p: proc.left()) {
-            if (p>=n_pop) throw ssa_error("population index out of bounds");
+            if (p>=n_pop) throw rdmini::invalid_value("population index out of bounds");
             --delta_map[p];
             left_sorted.push_back(p);
         }
         for (auto p: proc.right()) {
-            if (p>=n_pop) throw ssa_error("population index out of bounds");
+            if (p>=n_pop) throw rdmini::invalid_value("population index out of bounds");
             ++delta_map[p];
         }
 

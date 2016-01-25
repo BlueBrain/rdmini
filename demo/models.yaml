@@ -2,6 +2,11 @@
 #
 # * Base units are SI: metre, kilogram, second.
 #   Concentration measured in count / m^3.
+#   Reaction rates units by order:
+#       order 0: m^-3 s^-1
+#       order 1: s^-1
+#       order 2: m^3 s^-1
+#       order 3: m^6 s^-1
 # * One geometry specification, currently only a box grid is supported.
 # * One implicitly defined compartment, consisting of cells from the geometry.
 
@@ -35,6 +40,10 @@ reaction:
 
 ...
 ---
+
+# ridiculous exponents in reaction rate constants will be
+# addressed when we include proper unit support.
+
 model: turing
 
 cells:
@@ -56,17 +65,17 @@ reaction:
     name: r1
     left: [ A, A, B ]
     right: [ A, A, A ]
-    rate: 25e-24
+    rate: 6.25e-40
 
 reaction:
     name: r2
     right: A
-    rate: [ 25e-18, 0.5e-18 ]
+    rate: [ 4e16, 0.02 ]
 
 reaction:
     name: r3
     right: B
-    rate: 75e-18
+    rate: 1.2e17
 
 ...
 ---
