@@ -2,6 +2,7 @@
 #define SERIAL_SSA_H_
 
 #include <cstdint>
+#include <cmath>
 #include <vector>
 #include <map>
 #include <stdexcept>
@@ -44,7 +45,7 @@ public:
 
     struct kproc_info {
         std::vector<size_t> left_,right_; // lhs and rhs of the chemical recaion A + B = AB
-        double rate_;
+        double rate_; // rate constant w.r.t. counts (units: s^-1)
 
         const std::vector<size_t> &left() const { return left_; }
         const std::vector<size_t> &right() const { return right_; }
@@ -68,7 +69,8 @@ public:
             double vol=M.cells[c_id].volume;
             for (const auto &reac: M.reactions) {
                 kproc_info ki;
-                ki.rate_=reac.rate/vol;
+                int order=(int)reac.left.size();
+                ki.rate_=reac.rate*std::pow(vol,1-order);
                 for (size_t s_id: reac.left) ki.left_.push_back(species_to_pop(s_id,c_id));
                 for (size_t s_id: reac.right) ki.right_.push_back(species_to_pop(s_id,c_id));
             
