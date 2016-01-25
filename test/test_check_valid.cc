@@ -19,8 +19,13 @@ TEST(check_valid,check_valid) {
     ASSERT_NO_THROW(x.check_valid());
 
     x.bad_method();
+
     ASSERT_FALSE(x.is_valid());
     ASSERT_THROW(x.check_valid(),rdmini::validation_failure);
+
+    const auto &const_x=x;
+    ASSERT_FALSE(const_x.is_valid());
+    ASSERT_THROW(const_x.check_valid(),rdmini::validation_failure);
 }
 
 TEST(check_valid,check_valid_user_message) {
@@ -28,7 +33,8 @@ TEST(check_valid,check_valid_user_message) {
     x.bad_method();
 
     try {
-        x.check_valid("foobar");
+        const auto &const_x=x;
+        const_x.check_valid("foobar");
         FAIL() << "did not throw exception";
     }
     catch (rdmini::validation_failure &ex) {
@@ -46,7 +52,8 @@ TEST(check_valid,check_valid_ex) {
     using funny_exception=std::tuple<const char *,double>;
 
     try {
-        x.check_valid_ex<funny_exception>("quux",17.0);
+        const auto &const_x=x;
+        const_x.check_valid_ex<funny_exception>("quux",17.0);
         FAIL() << "did not throw exception";
     }
     catch (funny_exception &ex) {
@@ -112,7 +119,11 @@ TEST(check_valid,check_valid_what) {
 
 TEST(check_valid,assert_valid_ok) {
     dummy_class x;
+
     ASSERT_EXIT({x.assert_valid(); ::exit(0);},::testing::ExitedWithCode(0),"");
+
+    const auto &const_x=x;
+    ASSERT_EXIT({const_x.assert_valid(); ::exit(0);},::testing::ExitedWithCode(0),"");
 }
 
 TEST(check_valid,assert_valid_not_ok) {

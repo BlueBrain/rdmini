@@ -136,14 +136,14 @@ struct check_valid_api {
      * is available.
      */
 
-    void check_valid() {
+    void check_valid() const {
         if (auto v=me().is_valid()) return;
         else throw impl::make_validation_failure(v);
     }
 
     /** Check is_valid(), throw validation_failure if false with supplied message.  */
 
-    void check_valid(const std::string &message) {
+    void check_valid(const std::string &message) const {
         if (!me().is_valid()) throw validation_failure(message);
     }
 
@@ -151,13 +151,13 @@ struct check_valid_api {
      * if the check fails. */
 
     template <typename Exception=validation_failure,typename... Args>
-    void check_valid_ex(Args &&... args) {
+    void check_valid_ex(Args &&... args) const {
         if (!me().is_valid()) throw Exception(std::forward<Args>(args)...);
     }
 
     /** Check is_valid(), abort with message if false unless NDEBUG defined. */
 
-    void assert_valid() {
+    void assert_valid() const {
 #ifdef NDEBUG
 #else
         if (auto v=me().is_valid()) return;
