@@ -7,49 +7,44 @@
 #include <stdexcept>
 
 #include "rdmini/named_collection.h"
+#include "rdmini/check_valid.h"
 
 struct model_io_error: std::runtime_error {
     model_io_error(const std::string &what_arg): std::runtime_error(what_arg) {}
 };
 
-struct model_incorrectBiologicalValue_error: std::runtime_error {
-    model_incorrectBiologicalValue_error(const std::string &what_arg): std::runtime_error(what_arg) {}
-};
-
-
-/// Use this as functor to throw on invalid models
-/// This implementations is used as a work around to avoid adding getters/setters to defined struct 
-/// Could be made more generic to throw any type of error from boolean and type of test
-struct throwInvalidModl {
-    void operator()(bool b) { throw model_incorrectBiologicalValue_error("Negative biological value"); } 
-
-};
-
-struct species_info { 
+struct species_info: rdmini::check_valid_api<species_info> { 
     std::string name;
-    double diffusivity;
-    double concentration;
+    double diffusivity=0;
+    double concentration=0;
 
-    bool isModlValid() {
-        if ((diffusivity < 0.0f) || (concentration < 0.0f))
-            return false;
-        return true;
-   }
-};
+    species_info() =default;
+    species_info(const std::string &name_,double diff_,double conc_):
+        name(name_),diffusivity(diff_),concentration(conc_) {}
 
-struct reaction_info {
-    std::string name;
-    std::multiset<int> left,right;
-    double rate;
-
-    bool isModlValid() {
-        if (rate < 0.0f) 
-            return false;
+    rdmini::valid_info is_valid() const {
+        if (diffusivity<0) return "negative diffusivity";
+        if (concentration<0) return "negative concentration";
         return true;
     }
 };
 
-struct cell_info {
+struct reaction_info: rdmini::check_valid_api<reaction_info> {
+    std::string name;
+    std::multiset<int> left,right;
+    double rate=0;
+
+    reaction_info() =default;
+    reaction_info(const std::string &name_,const std::multiset<int> &left_,const std::multiset<int> &right_,double rate_):
+        name(name_),left(left_),right(right_),rate(rate_) {}
+
+    rdmini::valid_info is_valid() const {
+        if (rate<0) return "negative reaction rate constant";
+        return true;
+    }
+};
+
+struct cell_info: rdmini::check_valid_api<cell_info> {
     struct neighbour_data {
         size_t cell_id;
         double diff_coef;
@@ -57,12 +52,11 @@ struct cell_info {
         explicit neighbour_data(size_t cell_id_=0, double diff_coef_=0): cell_id(cell_id_), diff_coef(diff_coef_) {}
     };
 
-    double volume;
+    double volume=0;
     std::vector<neighbour_data> neighbours;
 
-    bool isModlValid() {
-        if (volume<0.0f)
-            return false;
+    rdmini::valid_info is_valid() const {
+        if (volume<=0) return "non-positive cell volume";
         return true;
     }
 };

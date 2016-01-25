@@ -33,7 +33,6 @@ class modelspec : public ::testing::Test
     rd_model schnakenbergModl;
     species_info specyA, specyB;
     reaction_info reactionA;
-    throwInvalidModl validation;
 };
 
 
@@ -50,31 +49,30 @@ TEST_F(modelspec,initialSpecification) {
 }
 
 
-TEST_F(modelspec,addSpecy) {
+TEST_F(modelspec,addSpecies) {
     /// Completing model specification
     // Adding specy which does not exist
-    species_info specyC={"C",0.05,15.0}; 
+    species_info speciesC={"C",0.05,15.0}; 
     // Verifying specy specification 
-    ASSERT_STREQ(specyC.name.c_str(),"C");
-    ASSERT_DOUBLE_EQ(0.05,specyC.diffusivity);
-    ASSERT_DOUBLE_EQ(15.0,specyC.concentration);
+    ASSERT_STREQ("C",speciesC.name.c_str());
+    ASSERT_DOUBLE_EQ(0.05,speciesC.diffusivity);
+    ASSERT_DOUBLE_EQ(15.0,speciesC.concentration);
 
     // Verifying that model is correctly updated  
-    schnakenbergModl.species.insert(specyC);
+    schnakenbergModl.species.insert(speciesC);
     ASSERT_TRUE(schnakenbergModl.n_species()==3);
     size_t index = schnakenbergModl.species.index("C"); 
     ASSERT_TRUE(index==2);
-    ASSERT_STREQ(schnakenbergModl.species[index].name.c_str(),"C");
+    ASSERT_STREQ("C",schnakenbergModl.species[index].name.c_str());
     ASSERT_DOUBLE_EQ(0.05,schnakenbergModl.species[index].diffusivity);
     ASSERT_DOUBLE_EQ(15.0,schnakenbergModl.species[index].concentration); 
 
-    species_info specyD={"D",-0.05,15.0};
-    ASSERT_TRUE(!specyD.isModlValid());
-    species_info specyE={"E",0.05,-15.0};
-    ASSERT_TRUE(!specyE.isModlValid());
+    species_info speciesD={"D",-0.05,15.0};
+    ASSERT_FALSE(speciesD.is_valid());
+    species_info speciesE={"E",0.05,-15.0};
+    ASSERT_FALSE(speciesE.is_valid());
 
-    ASSERT_THROW(validation(specyD.isModlValid()), model_incorrectBiologicalValue_error); 
-    
+    ASSERT_THROW(speciesD.check_valid(),rdmini::validation_failure);
 }
 
 TEST_F(modelspec,addReaction) {
@@ -87,22 +85,28 @@ TEST_F(modelspec,addReaction) {
     ASSERT_TRUE(schnakenbergModl.n_reactions()==2);
     size_t index = schnakenbergModl.reactions.index("reactionA");
     ASSERT_TRUE(index==0);
-    ASSERT_STREQ(schnakenbergModl.reactions[index].name.c_str(),"reactionA");
-    ASSERT_DOUBLE_EQ(4e-5, schnakenbergModl.reactions[index].rate); 
+
+    const auto &model_reactionA=schnakenbergModl.reactions[index];
+    ASSERT_STREQ("reactionA",model_reactionA.name.c_str());
+    ASSERT_DOUBLE_EQ(4e-5,model_reactionA.rate);
+    ASSERT_TRUE(model_reactionA.is_valid());
 
     index = schnakenbergModl.reactions.index("reactionB");
     ASSERT_TRUE(index==1);
-    ASSERT_STREQ(schnakenbergModl.reactions[index].name.c_str(),"reactionB");
-    ASSERT_DOUBLE_EQ(10, schnakenbergModl.reactions[index].rate);
-    ASSERT_TRUE( schnakenbergModl.reactions[index].left.size()==3);
-    ASSERT_TRUE( schnakenbergModl.reactions[index].right.size()==4);  
 
-    /// Check for reaction values
-/*    std::multiset<int>::value_compare comparison = right.value_comp();
-    std::multiset<int>::iterator it = right.begin();
-    do {
-        std::cout << ' ' << *it;
-    } while (mycomp(*it++, */
+    const auto &model_reactionB=schnakenbergModl.reactions[index];
+    ASSERT_STREQ("reactionB",model_reactionB.name.c_str());
+    ASSERT_DOUBLE_EQ(10,model_reactionB.rate);
+    ASSERT_TRUE(model_reactionB.left.size()==3);
+    ASSERT_TRUE(model_reactionB.right.size()==4);  
+    ASSERT_TRUE(model_reactionB.is_valid());
+    ASSERT_NO_THROW(model_reactionB.check_valid());
+
+    /// Add improper reaction
+    reaction_info reactionC={"reactionC",left,right,-10};   
+    schnakenbergModl.reactions.insert(reactionC);
+
+    ASSERT_THROW(schnakenbergModl.reactions["reactionC"].check_valid(),rdmini::validation_failure);
 }
 
 /*

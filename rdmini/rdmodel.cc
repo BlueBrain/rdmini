@@ -9,6 +9,8 @@
 #include "rdmini/point.h"
 #include "rdmini/range_seq.h"
 
+using namespace rdmini;
+
 static std::ostream &emit_reaction_expr(std::ostream &O,const rd_model &M,const std::multiset<int> &x) {
     bool first=true;
     if (x.empty()) return O << u8"\u00d8"; // crayCC barfs on utf8 in source
@@ -84,18 +86,16 @@ static void parse_species(rd_model &M,const yaml_node_view &S) {
         yaml_node_view conc=S["concentration"];
         if (conc) conc_value=std::stod(conc.str());
 
-        species_info species{name,diff_value,conc_value};
-        if (species.diffusivity<std::numeric_limits<double>::epsilon()) 
-          throw model_incorrectBiologicalValue_error("Value of diffusivity is negative");
-        if (species.concentration<std::numeric_limits<double>::epsilon()) 
-          throw model_incorrectBiologicalValue_error("Value of concentration is negative");
-        //assert(species.diffusivity<std::numeric_limits<double>::epsilon());
-        //assert(species.concentration<std::numeric_limits<double>::epsilon());
+        species_info species={name,diff_value,conc_value};
+        species.check_valid();
 
         M.species.insert(species);
     }
     catch (yaml_error &error) {
-        throw model_io_error("parsing species failue: "+error.where());
+        throw model_io_error("parsing species failure: "+error.where());
+    }
+    catch (validation_failure &error) {
+        throw model_io_error("parsing species failure: "+std::string(error.what()));
     }
 }
 
@@ -122,30 +122,36 @@ error:
 // Parse reaction info
 
 static void parse_reaction(rd_model &M,const yaml_node_view &R) {
-    std::string name=check_or_make_unique_name(M.reactions,R["name"],"_r");
+    try {
+        std::string name=check_or_make_unique_name(M.reactions,R["name"],"_r");
 
-    yaml_node_view rate_node=R["rate"];
-    double rate=0,rate_rev=0;
-    if (!rate_node || rate_node.is_map() || rate_node.size()<1 || rate_node.size()>2)
-        throw model_io_error("unknown reaction rate specification: "+R.where());
-    
-    rate=std::stod(rate_node[0].str());
-    std::multiset<int> left=parse_species_list(M,R["left"]);
-    std::multiset<int> right=parse_species_list(M,R["right"]);
+        yaml_node_view rate_node=R["rate"];
+        double rate=0,rate_rev=0;
+        if (!rate_node || rate_node.is_map() || rate_node.size()<1 || rate_node.size()>2)
+            throw model_io_error("unknown reaction rate specification: "+R.where());
+        
+        rate=std::stod(rate_node[0].str());
+        std::multiset<int> left=parse_species_list(M,R["left"]);
+        std::multiset<int> right=parse_species_list(M,R["right"]);
 
-    reaction_info reaction={name,left,right,rate};
-    //assert(reaction.rate<std::numeric_limits<double>::epsilon());
-    if (reaction.rate<std::numeric_limits<double>::epsilon()) 
-          throw model_incorrectBiologicalValue_error("Value of reaction rate is negative");
+        reaction_info reaction={name,left,right,rate};
+        reaction.check_valid();
 
-    M.reactions.insert(reaction);
-
-    if (rate_node.size()>1) {
-        std::string name_rev=M.reactions.unique_key(name+"_rev");
-        rate_rev=std::stod(rate_node[1].str());
-
-        reaction_info reaction={name_rev,right,left,rate_rev};
         M.reactions.insert(reaction);
+
+        if (rate_node.size()>1) {
+            std::string name_rev=M.reactions.unique_key(name+"_rev");
+            rate_rev=std::stod(rate_node[1].str());
+
+            reaction_info reaction={name_rev,right,left,rate_rev};
+            M.reactions.insert(reaction);
+        }
+    }
+    catch (yaml_error &error) {
+        throw model_io_error("parsing reaction failure: "+error.where());
+    }
+    catch (validation_failure &error) {
+        throw model_io_error("parsing reaction failure: "+std::string(error.what()));
     }
 }
 
@@ -165,17 +171,20 @@ static void parse_cells_wmvol(rd_model &M,const yaml_node_view &e) {
         std::string name=check_or_make_unique_name(M.cell_sets,e["name"],"_wmvol");
         size_t c0=M.cells.size();
 
-        cell_info ci={std::stod(e["volume"].str())};
-        if (ci.volume<std::numeric_limits<double>::epsilon()) 
-          throw model_incorrectBiologicalValue_error("Value of volume is negative");
-//        assert(ci.volume<std::numeric_limits<double>::epsilon());
+        cell_info ci;
+        ci.volume=std::stod(e["volume"].str());
+        ci.check_valid();
+
         M.cells.push_back(ci);
 
         cell_set cs={name,{c0}};
         M.cell_sets.insert(cs);
     }
     catch (yaml_error &) {
-        throw model_io_error("error parsing cells wmvol entry: "+e.where());
+        throw model_io_error("parsing cells wmvol failure: "+e.where());
+    }
+    catch (validation_failure &error) {
+        throw model_io_error("parsing cells wmvol failure: "+std::string(error.what()));
     }
 }
 
@@ -206,7 +215,9 @@ static void parse_cells_grid(rd_model &M,const yaml_node_view &e) {
         for (size_t k=0; k<n[2]; ++k) {
             for (size_t j=0; j<n[1]; ++j) {
                 for (size_t i=0; i<n[0]; ++i) {
-                    cell_info ci={vol};
+                    cell_info ci;
+                    ci.volume=vol;
+
                     if (i>0)      ci.neighbours.emplace_back(cidx(i-1,j,k),dc[0]);
                     if (i<n[0]-1) ci.neighbours.emplace_back(cidx(i+1,j,k),dc[0]);
                     if (j>0)      ci.neighbours.emplace_back(cidx(i,j-1,k),dc[1]);
@@ -224,7 +235,7 @@ static void parse_cells_grid(rd_model &M,const yaml_node_view &e) {
         M.cell_sets.insert(cs);
     }
     catch (yaml_error &E) {
-        throw model_io_error("error parsing cells grid entry: "+e.where()+": "+E.what());
+        throw model_io_error("parsing cells grid failure: "+e.where()+": "+E.what());
     }
 }
 
