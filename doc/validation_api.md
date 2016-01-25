@@ -10,7 +10,9 @@ been preserved.
 
 Classes which offer a validity test should provide a public method
 
-    X is_valid() const
+````cpp
+X is_valid() const
+````
 
 with a return value that converts implicitly to `bool`, giving false if and
 only if the validation check fails. The return value may contain additional
@@ -21,14 +23,16 @@ information, depending on the type.
 The `check_valid_api` template class definied in `check_valid.h` provides additional functionality.
 A class `T` deriving from `check_valid<T>` provides additional member functions:
 
-    void check_valid() const;
+````cpp
+void check_valid() const;
 
-    void check_valid(const std::string &message) const;
+void check_valid(const std::string &message) const;
 
-    template <typename Exception,typename... Args>
-    void check_valid_ex(Args &&... args) const;
+template <typename Exception,typename... Args>
+void check_valid_ex(Args &&... args) const;
 
-    void assert_valid() const;
+void assert_valid() const;
+````
 
 The first two will throw an exception of type `rdmini::validation_failure` if
 `is_valid()` returns a value that implicity converts to false; if no message is
@@ -68,32 +72,34 @@ will print a message to `stderr` and abort if the check fails.
 
 Example usage:
 
-    using namespace rdmini;
+````cpp
+using namespace rdmini;
 
-    struct my_class: check_valid_api<my_class> {
-	void foo() {
-	    // abort if is_valid() returns false at beginning or end
-            // of the methos.
-	    auto _(assert_valid_guard(this));
+struct my_class: check_valid_api<my_class> {
+    void foo() {
+        // abort if is_valid() returns false at beginning or end
+        // of the methos.
+        auto _(assert_valid_guard(this));
 
-	    unsafe_operation();
-            // ...
-	}
-
-	void unsafe_operation() { /* ... */ }
-
-	valid_info is_valid() const {
-	    if (a!=b) return "a not equal to b";
-	    else return true;
-	}
-
-	int a,b; // invariant: a==b
-    };
-
-    void bar(my_class &x) {
-	// throw if x is invalid at beginning or end of bar()
-	auto _(check_valid_guard(x));
-
-	x.unsafe_operation();
+        unsafe_operation();
+        // ...
     }
+
+    void unsafe_operation() { /* ... */ }
+
+    valid_info is_valid() const {
+        if (a!=b) return "a not equal to b";
+        else return true;
+    }
+
+    int a,b; // invariant: a==b
+};
+
+void bar(my_class &x) {
+    // throw if x is invalid at beginning or end of bar()
+    auto _(check_valid_guard(x));
+
+    x.unsafe_operation();
+}
+````
 
