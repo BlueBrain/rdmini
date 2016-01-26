@@ -45,12 +45,25 @@ CC = __error__
 CXX = __error__
 endif
 
+# invoking pandoc
+
+ifneq ($(shell command -v pandoc-citeproc;),)
+define run_pandoc
+pandoc -s -t html $< --filter pandoc-citeproc -o $@
+endef
+else
+define run_pandoc
+@echo warning: pandoc-citeproc not found, not processing references.
+pandoc -s -t html $< -o $@
+endef
+endif
+
 # main targets
 
 demos := demo_parse demo_ssa_direct demo_sim demo_timer_test
-tests := test_dummy test_modelspec test_modelspecYaml test_ssaapi
+tests := test_dummy test_modelspec test_modelspecYaml test_ssaapi test_check_valid
 benches := 
-docs := simapi.html demo_models.html
+docs := simapi.html demo_models.html validation_api.html
 
 all: $(demos) $(tests) $(benches)
 
@@ -140,7 +153,8 @@ style.csl: $(csl-stylesheet)
 	cp $< $@
 
 %.html: $(top)/doc/%.md style.csl
-	pandoc -s -t html $< --filter pandoc-citeproc -o $@
+	$(run_pandoc)
+	  
 
 # dependencies
 
