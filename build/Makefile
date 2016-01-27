@@ -61,7 +61,7 @@ endif
 # main targets
 
 demos := demo_parse demo_ssa_direct demo_sim demo_timer_test
-tests := test_dummy test_modelspec test_modelspecYaml test_ssaapi test_check_valid
+tests := test_dummy test_modelspec test_modelspec_yaml test_ssaapi test_check_valid
 benches := 
 docs := simapi.html demo_models.html validation_api.html
 
