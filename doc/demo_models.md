@@ -1,4 +1,6 @@
-# Example reaction–diffusion models.
+---
+title: Example reaction–diffusion models
+---
 
 The `demo/models.yaml` contains a number of simple reaction system and reaction–diffusion
 system models from the literature.
@@ -19,16 +21,16 @@ deterministic system of ODEs.
 
 **Reaction system**
 
-|                  |                                            |
-|------------------|--------------------------------------------|
-| 2*A* + *B* → 3*A* | &#x2001; *k*<sub>1</sub>=4×10<sup>-5</sup> s<sup>-1</sup>             |
-| ∅ ⇄ *A*           | &#x2001; *k*<sub>2</sub>=40 s<sup>-1</sup>,  *k*<sub>3</sub>=10 s<sup>-1</sup> |
-| ∅ → *B*           | &#x2001; *k*<sub>4</sub>=25 s<sup>-1</sup>                   |
+| reaction   | rate constants |
+|------------|----------------|
+| 2*A* + *B* → 3*A* | *k*<sub>1</sub>=4×10<sup>-5</sup> s<sup>-1</sup>             |
+| ∅ ⇄ *A*           | *k*<sub>2</sub>=40 s<sup>-1</sup>,  *k*<sub>3</sub>=10 s<sup>-1</sup> |
+| ∅ → *B*           | *k*<sub>4</sub>=25 s<sup>-1</sup>                   |
 
 **Initial conditions**
 
-|     |    |
-|-----|----|
+| species | concentration |
+|---------|---------------|
 | *A*: | 10 |
 | *B*: | 10 |
 
@@ -41,18 +43,18 @@ simulation demonstrates spontaneous transition between these two states.
 
 **Reaction system**
 
-|            |                                                     |
-|------------|-----------------------------------------------------|
-| 2*A* ⇄ 3*A* | &#x2001; *k*<sub>1</sub>=0.18 s<sup>-1</sup>, *k*<sub>2</sub>=2.5×10<sup>-4</sup> s<sup>-1</sup> |
-| ∅ ⇄ *A*     | &#x2001; *k*<sub>3</sub>=2200 s<sup>-1</sup>, *k*<sub>4</sub>=37.5 s<sup>-1</sup>       |
+| reaction   | rate constants |
+|------------|----------------|
+| 2*A* ⇄ 3*A* | *k*<sub>1</sub>=0.18 s<sup>-1</sup>, *k*<sub>2</sub>=2.5×10<sup>-4</sup> s<sup>-1</sup> |
+| ∅ ⇄ *A*     | *k*<sub>3</sub>=2200 s<sup>-1</sup>, *k*<sub>4</sub>=37.5 s<sup>-1</sup>       |
 
 Note that this description has rescaled the reaction constants from per-minute
 quantities to per-second quantities.
 
 **Initial conditions**
 
-|     |   |
-|-----|---|
+| species | concentration |
+|---------|---------------|
 | *A*: | 0 |
 
 ## Turing
@@ -68,20 +70,26 @@ and the reaction rates below have been scaled accordingly.
 
 **Reaction system**
 
-|                  |                                                      |
-|------------------|------------------------------------------------------|
-| 2*A* + *B* → 3*A* | &#x2001; *k*<sub>1</sub>=6.25×10<sup>-4</sup> µm<sup>6</sup>s<sup>-1</sup>               |
-| ∅ ⇄ *A*           | &#x2001; *k*<sub>2</sub>=0.04 µm<sup>3</sup>·s<sup>-1</sup>,  *k*<sub>3</sub>=0.02 s<sup>-1</sup> |
-| ∅ → *B*           | &#x2001; *k*<sub>4</sub>=0.12 µm<sup>3</sup>·s<sup>-1</sup>                     |
+| reaction   | rate constants |
+|------------|----------------|
+| 2*A* + *B* → 3*A* | *k*<sub>1</sub>=6.25×10<sup>-4</sup> µm<sup>6</sup>s<sup>-1</sup>               |
+| ∅ ⇄ *A*           | *k*<sub>2</sub>=0.04 µm<sup>3</sup>·s<sup>-1</sup>,  *k*<sub>3</sub>=0.02 s<sup>-1</sup> |
+| ∅ → *B*           | *k*<sub>4</sub>=0.12 µm<sup>3</sup>·s<sup>-1</sup>                     |
 
 
 **Diffusion coefficients**
 
-|     |                    |
-|-----|--------------------|
+| species | diffusivity |
+|---------|-------------|
 | *A*: | 10<sup>-5</sup> mm<sup>2</sup>·s<sup>-1</sup> |
 | *B*: | 10<sup>-3</sup> mm<sup>2</sup>·s<sup>-1</sup> |
 
+**Initial conditions**
+
+| species | concentration |
+|---------|---------------|
+| *A*: | 8 µm<sup>-3 |
+| *B*: | 0.12 µm<sup>-3 |
 
 
 -----

@@ -1,4 +1,6 @@
-# Invariant checking and validation
+---
+title: Invariant checking and validation
+---
 
 Some classes or API specifications may admit a valdidity or consistency/invariant check. For
 uniformity in tests, these checks should conform to the API described below.

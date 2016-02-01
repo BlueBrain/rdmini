@@ -63,9 +63,10 @@ endif
 demos := demo_parse demo_ssa_direct demo_sim demo_timer_test
 tests := test_dummy test_modelspec test_modelspec_yaml test_ssaapi test_check_valid
 benches := 
-docs := simapi.html demo_models.html validation_api.html
+hakyll_site := ./site
+docdir := www
 
-all: $(demos) $(tests) $(benches)
+all: $(demos) $(tests) $(benches) doc
 
 # directories
 
@@ -143,18 +144,23 @@ libgtestmain.a: obj/gtest-all.o obj/gtest_main.o
 	$(AR) $(ARFLAGS) $@ $^
 
 
-# docs
+# build docs with Hakyll site generator
 
-doc: $(docs)
+$(hakyll_site): $(top)/doc/src/site.hs
+	ghc -hidir obj -odir obj -o $@ --make $<
 
 csl-stylesheet = $(top)/doc/style.csl
 
 style.csl: $(csl-stylesheet)
 	cp $< $@
 
-%.html: $(top)/doc/%.md style.csl
-	$(run_pandoc)
-	  
+doc: $(hakyll_site) style.csl
+	$(hakyll_site) rebuild -v -d $(docdir) $(top)/doc
+	
+# write docs to gh-pages branch
+
+gh-pages: doc
+	./commit-dir -v gh-pages $(docdir)
 
 # dependencies
 
@@ -175,10 +181,11 @@ endif
 # clean
 
 clean:
-	rm -f gtest-all.o gtest_main.o obj/*.o obj/yaml/*.o obj/*.d.bak style.csl
+	rm -f gtest-all.o gtest_main.o obj/*.o obj/*.hi obj/yaml/*.o obj/*.d.bak style.csl
 
 realclean: clean
-	rm -f $(docs) $(demos) $(tests) $(benches) libgtestmain.a libyaml.a obj/*.d obj/yaml/*.d 
+	rm -f $(demos) $(tests) $(benches) $(hakyll_site) libgtestmain.a libyaml.a obj/*.d obj/yaml/*.d 
+	rm -rf $(docdir) _cache style.csl
 
 # run tests
 

@@ -1,4 +1,9 @@
-# Conventions and exceptions
+---
+title: Simulator concepts and exceptions
+---
+
+<!-- use special table rendering from css -->
+<div class="concept-table">
 
 ## Exceptions
 
@@ -31,14 +36,15 @@ An SSA implementation may be comprise an SSA selector and SSA process system, de
 
 ## Types
 
- name | type | description 
-------|------|-------------
- `S::count_type` | integral type | represents population counts
+ name      | type        | description 
+-----------|-------------|--------------------------------------
+`S::count_type` | integral type | represents population counts
+foo | bar | baz
 
 ## Constants
 
- name | type | description
-------|------|-------------
+ name      | type        | description 
+-----------|-------------|--------------------------------------
 `S::max_process_order` | unsigned integral type | maximum order of an (elementary) reaction
 `S::max_participants` | unsigned integral type | maximum number of distinct populations affected by one reaction
 `S::dynamic_range` | unsigned intgral type | maximum (base 2) logarithm of ratios of propensities
@@ -48,10 +54,10 @@ An SSA implementation may be comprise an SSA selector and SSA process system, de
 Here `g` represents a uniform random generator, passed by reference.
 
 expression | return type | description
------------|-------------|------------
+-----------|-------------|--------------------------------------
 `s.initialise(M,t0)` | | set up simulator to simulate given `rd_model` with initial sim time `t0`
-`s.count(s_id,c_id)` | `count_type` | return population count of species index `s_id` in cell `c_id`
-`s.set_count(s_id,c_id,count)` | | set population count of species index `s_id` in cell `c_id`
+`s.count(s,c)` | `count_type` | return population count of species index `s` in cell `c`
+`s.set_count(s,c,k)` | | set population count of species index `s` in cell `c` to `k`
 `s.advance(g)` | double | advance simulator state by minimum time step, returning new simulation time
 `s.advance(t,g)` | double | advance simulator up to time `t`, returning new simulation time
 
@@ -62,8 +68,8 @@ Let `A` denote a class implementing the SSA selector API.
 
 ## Types
 
-name | type | description
------|------|------------
+name       | type        | description
+-----------|-------------|--------------------------------------
 `A::key_type` | implementation specific | keys representing individual procesess
 `A::value_type` | floating point type | represents process propensities
 `A::event_type` | implementation specific | describes generated process events
@@ -78,7 +84,7 @@ In the following let `a` be an instance of `A`, `ac` a const instance of `A`,
 `next` method.
 
 expression | return type | description
------------|-------------|------------
+-----------|-------------|--------------------------------------
 `a.reset(n)` | | initialise state to represent `n` processes, with initially zero propensity
 `a.update(k,r)` | | set propensity of process `k` to `r`; may throw `rdmini::invalid_value`
 `ac.size()`   | unsigned integral type | total number of represented processes
@@ -100,8 +106,8 @@ For a process system of type `Y`, instance `y`.
 
 ## Types
 
-name | type | description
------|------|------------
+ name      | type        | description 
+-----------|-------------|--------------------------------------
 `Y::key_type` | implementation specific | keys representing individual procesess
 `Y::value_type` | floating point type | represents process propensities
 `Y::count_type` | integral type | represents population counts
@@ -110,8 +116,8 @@ As for an SSA selector, `Y::key_type` should likely be an unsigned integral type
 
 ## Constants
 
-name | type | description
------|------|------------
+ name      | type        | description 
+-----------|-------------|--------------------------------------
 `Y::max_population_index` | unsigned integral | maximum population index
 `Y::max_process_order` | unsigned integral | maximum process order
 `Y::max_participants` | unsigned integral | maximum disrinct populations involved in a process
@@ -131,7 +137,7 @@ In the follwing,
 * `notify` is a function object with signature equivalent to `void notify(key_type)`.
 
 expression | return type | description
------------|-------------|------------
+-----------|-------------|--------------------------------------
 `y.clear()`   | | reset state, discarding all process information
 `y.defing_processes(b,e)` | | configure system with processes described by iterator interval [`b`,`e`)
 `y.size()  `  | | number of processes in system
@@ -143,3 +149,4 @@ expression | return type | description
 
 As for an SSA selector, `Y::key_type` should likely be an unsigned integral type.
 
+</div>
