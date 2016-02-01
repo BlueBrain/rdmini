@@ -16,9 +16,7 @@
         <div id="content">
             <h1>Simulator concepts and exceptions</h1>
 
-            <!-- use special table rendering from css -->
-<div class="concept-table">
-<h2 id="exceptions">Exceptions</h2>
+            <h2 id="exceptions">Exceptions</h2>
 <h3 id="rdminioperation_not_supported"><code>rdmini::operation_not_supported</code></h3>
 <p>Derives from <code>std::logic_error</code></p>
 <p>Some operations described in the API below may be optional, in that they may not be practical to support in every implementation, and are not crucial in providing SSA functionality. Such operations may thus instead throw an exception of this type.</p>
@@ -28,10 +26,12 @@
 <h3 id="rdminissa_error"><code>rdmini::ssa_error</code></h3>
 <p>Derives from <code>std::runtime_error</code></p>
 <p>Represents an internal error in an SSA implementation.</p>
-<h1 id="simulator-engine-interface">Simulator engine interface</h1>
+<h2 id="simulator-engine-interface">Simulator engine interface</h2>
+<!-- use special table rendering from css -->
+<div class="concept-table">
 <p>Any instance <code>s</code> of a simulator implementation <code>S</code> should provide the following interface to callers.</p>
 <p>An SSA implementation may be comprise an SSA selector and SSA process system, described below.</p>
-<h2 id="types">Types</h2>
+<h3 id="types">Types</h3>
 <table>
 <thead>
 <tr class="header">
@@ -53,7 +53,7 @@
 </tr>
 </tbody>
 </table>
-<h2 id="constants">Constants</h2>
+<h3 id="constants">Constants</h3>
 <table>
 <thead>
 <tr class="header">
@@ -80,7 +80,7 @@
 </tr>
 </tbody>
 </table>
-<h2 id="methods">Methods</h2>
+<h3 id="methods">Methods</h3>
 <p>Here <code>g</code> represents a uniform random generator, passed by reference.</p>
 <table>
 <thead>
@@ -118,9 +118,9 @@
 </tr>
 </tbody>
 </table>
-<h1 id="ssa-selector-implementations">SSA selector implementations</h1>
+<h2 id="ssa-selector-implementations">SSA selector implementations</h2>
 <p>Let <code>A</code> denote a class implementing the SSA selector API.</p>
-<h2 id="types-1">Types</h2>
+<h3 id="types-1">Types</h3>
 <table>
 <thead>
 <tr class="header">
@@ -147,7 +147,7 @@
 </tr>
 </tbody>
 </table>
-<h2 id="methods-1">Methods</h2>
+<h3 id="methods-1">Methods</h3>
 <p>In the following let <code>a</code> be an instance of <code>A</code>, <code>ac</code> a const instance of <code>A</code>, <code>g</code> a uniform random number generator (see section [rand.req.urng] in C++ standard), <code>n</code> an unsigned integral value, <code>k</code> a value of type <code>A::key_type</code>, <code>r</code> a value of type <code>A::value_type</code>, and <code>ev</code> an event of type <code>A::event_type</code> returned by the <code>next</code> method.</p>
 <table>
 <thead>
@@ -201,10 +201,10 @@
 </tbody>
 </table>
 <p>In practice, <code>A::key_type</code> should generally be an unsigned integral type, taking values from the range [0, <code>a.size()</code>).</p>
-<h1 id="ssa-process-system-implementation">SSA process system implementation</h1>
+<h2 id="ssa-process-system-implementation">SSA process system implementation</h2>
 <p>A process system encapsulates the dependency relations between populations and processes.</p>
 <p>For a process system of type <code>Y</code>, instance <code>y</code>.</p>
-<h2 id="types-2">Types</h2>
+<h3 id="types-2">Types</h3>
 <table>
 <thead>
 <tr class="header">
@@ -232,7 +232,7 @@
 </tbody>
 </table>
 <p>As for an SSA selector, <code>Y::key_type</code> should likely be an unsigned integral type.</p>
-<h2 id="constants-1">Constants</h2>
+<h3 id="constants-1">Constants</h3>
 <table>
 <thead>
 <tr class="header">
@@ -264,7 +264,7 @@
 </tr>
 </tbody>
 </table>
-<h2 id="methods-2">Methods</h2>
+<h3 id="methods-2">Methods</h3>
 <p>In the follwing,</p>
 <ul>
 <li><code>k</code> is of type <code>Y::key_type</code>, representing a process identifier.</li>
