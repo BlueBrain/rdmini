@@ -2,9 +2,6 @@
 title: Simulator concepts and exceptions
 ---
 
-<!-- use special table rendering from css -->
-<div class="concept-table">
-
 ## Exceptions
 
 ### `rdmini::operation_not_supported`
@@ -28,20 +25,23 @@ Derives from `std::runtime_error`
 
 Represents an internal error in an SSA implementation.
 
-# Simulator engine interface
+## Simulator engine interface
+
+<!-- use special table rendering from css -->
+<div class="concept-table">
 
 Any instance `s` of a simulator implementation `S` should provide the following interface to callers.
 
 An SSA implementation may be comprise an SSA selector and SSA process system, described below.
 
-## Types
+### Types
 
  name      | type        | description 
 -----------|-------------|--------------------------------------
 `S::count_type` | integral type | represents population counts
 foo | bar | baz
 
-## Constants
+### Constants
 
  name      | type        | description 
 -----------|-------------|--------------------------------------
@@ -49,7 +49,7 @@ foo | bar | baz
 `S::max_participants` | unsigned integral type | maximum number of distinct populations affected by one reaction
 `S::dynamic_range` | unsigned intgral type | maximum (base 2) logarithm of ratios of propensities
 
-## Methods
+### Methods
 
 Here `g` represents a uniform random generator, passed by reference.
 
@@ -62,11 +62,11 @@ expression | return type | description
 `s.advance(t,g)` | double | advance simulator up to time `t`, returning new simulation time
 
 
-# SSA selector implementations
+## SSA selector implementations
 
 Let `A` denote a class implementing the SSA selector API.
 
-## Types
+### Types
 
 name       | type        | description
 -----------|-------------|--------------------------------------
@@ -75,7 +75,7 @@ name       | type        | description
 `A::event_type` | implementation specific | describes generated process events
 
 
-## Methods
+### Methods
 
 In the following let `a` be an instance of `A`, `ac` a const instance of `A`,
 `g` a uniform random number generator (see section [rand.req.urng] in C++ standard),
@@ -97,14 +97,14 @@ expression | return type | description
 In practice, `A::key_type` should generally be an unsigned integral type, taking
 values from the range [0, `a.size()`).
 
-# SSA process system implementation
+## SSA process system implementation
 
 A process system encapsulates the dependency relations between populations and
 processes.
 
 For a process system of type `Y`, instance `y`.
 
-## Types
+### Types
 
  name      | type        | description 
 -----------|-------------|--------------------------------------
@@ -114,7 +114,7 @@ For a process system of type `Y`, instance `y`.
 
 As for an SSA selector, `Y::key_type` should likely be an unsigned integral type.
 
-## Constants
+### Constants
 
  name      | type        | description 
 -----------|-------------|--------------------------------------
@@ -123,7 +123,7 @@ As for an SSA selector, `Y::key_type` should likely be an unsigned integral type
 `Y::max_participants` | unsigned integral | maximum disrinct populations involved in a process
 `Y::max_count` | unsigned integral | maximum population count
 
-## Methods
+### Methods
 
 In the follwing,
 
