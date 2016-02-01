@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Invariant checking and validation</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="navigation">
+                <a href="../"><tt>rdmini</tt> home</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Invariant checking and validation</h1>
+
+            <p>Some classes or API specifications may admit a valdidity or consistency/invariant check. For uniformity in tests, these checks should conform to the API described below.</p>
+<h2 id="validity-checks">Validity checks</h2>
+<p>Validity tests confirm that members have valid values and that any class invariants have been preserved.</p>
+<p>Classes which offer a validity test should provide a public method</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp">X is_valid() <span class="dt">const</span></code></pre></div>
+<p>with a return value that converts implicitly to <code>bool</code>, giving false if and only if the validation check fails. The return value may contain additional information, depending on the type.</p>
+<h2 id="the-check_valid_api-class">The <code>check_valid_api</code> class</h2>
+<p>The <code>check_valid_api</code> template class definied in <code>check_valid.h</code> provides additional functionality. A class <code>T</code> deriving from <code>check_valid&lt;T&gt;</code> provides additional member functions:</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="dt">void</span> check_valid() <span class="dt">const</span>;
+
+<span class="dt">void</span> check_valid(<span class="dt">const</span> std::string &amp;message) <span class="dt">const</span>;
+
+<span class="kw">template</span> &lt;<span class="kw">typename</span> Exception,<span class="kw">typename</span>... Args&gt;
+<span class="dt">void</span> check_valid_ex(Args &amp;&amp;... args) <span class="dt">const</span>;
+
+<span class="dt">void</span> assert_valid() <span class="dt">const</span>;</code></pre></div>
+<p>The first two will throw an exception of type <code>rdmini::validation_failure</code> if <code>is_valid()</code> returns a value that implicity converts to false; if no message is explicitly given, and the return type of <code>is_valid</code> has a member function with signature <code>R what() const</code> with return type <code>R</code> convertible to <code>std::string</code>, this message is used to construct the <code>validation_failure</code> exception.</p>
+<p>The third form will throw an exception of type specified in the template parameter, constructed from the supplied arguments.</p>
+<p>The <code>assert_valid()</code> member function will do nothing if <code>NDEBUG</code> is defined, but otherwise will abort with a message if the validation check fails.</p>
+<p>A helper class <code>valid_info</code> is provided as a convenient return type for an <code>is_valid</code> member function. <code>valid_info</code> converts implicitly to and from <code>bool</code>, but also may be constructed from a <code>std::string</code> argument describing how a validation check fails.</p>
+<h2 id="other-functionality-in-check_valid.h">Other functionality in <code>check_valid.h</code></h2>
+<p>This header also defines two macros, <code>SOURCE_LINE</code> (a string literal) and <code>SOURCE_LINE_FUNC</code> (a temporary value of type <code>const char *</code>) which expand to the current source file and line number, or file, line number and function name respectively.</p>
+<p>In addition, two scoped validation check functions are provided, <code>check_valid_guard</code> and <code>assert_valid_guard</code>. These produce a guard object (of implementation-specific type) which will perform validity checks on the supplied object or object pointer at construction and also when the guard falls out of scope (i.e. is destroyed.)</p>
+<p><code>check_valid_guard</code> will throw a <code>rdmini::validation_failure</code> exception on check failure.</p>
+<p><code>assert_valid_guard</code> will perform no checks if <code>NDEBUG</code> is defined, but otherwise will print a message to <code>stderr</code> and abort if the check fails.</p>
+<p>Example usage:</p>
+<div class="sourceCode"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span class="kw">using</span> <span class="kw">namespace</span> rdmini;
+
+<span class="kw">struct</span> my_class: check_valid_api&lt;my_class&gt; {
+    <span class="dt">void</span> foo() {
+        <span class="co">// abort if is_valid() returns false at beginning or end</span>
+        <span class="co">// of the methos.</span>
+        <span class="kw">auto</span> _(assert_valid_guard(<span class="kw">this</span>));
+
+        unsafe_operation();
+        <span class="co">// ...</span>
+    }
+
+    <span class="dt">void</span> unsafe_operation() { <span class="co">/* ... */</span> }
+
+    valid_info is_valid() <span class="dt">const</span> {
+        <span class="kw">if</span> (a!=b) <span class="kw">return</span> <span class="st">&quot;a not equal to b&quot;</span>;
+        <span class="kw">else</span> <span class="kw">return</span> <span class="kw">true</span>;
+    }
+
+    <span class="dt">int</span> a,b; <span class="co">// invariant: a==b</span>
+};
+
+<span class="dt">void</span> bar(my_class &amp;x) {
+    <span class="co">// throw if x is invalid at beginning or end of bar()</span>
+    <span class="kw">auto</span> _(check_valid_guard(x));
+
+    x.unsafe_operation();
+}</code></pre></div>
+<div id="refs" class="references">
+
+</div>
+        </div>
+        <div id="footer">
+            Site generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>

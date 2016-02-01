@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Example reaction–diffusion models</title>
+        <link rel="stylesheet" type="text/css" href="./css/default.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="navigation">
+                <a href="./"><tt>rdmini</tt> home</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Example reaction–diffusion models</h1>
+
+            <p>The <code>demo/models.yaml</code> contains a number of simple reaction system and reaction–diffusion system models from the literature.</p>
+<p>Note that the units of the quantities expressed in the models file are in counts, metres, and seconds; this leads to some very large or small quantities for typical cell volumes, such as the 25 µm^3 cells used in the Turing example below. This problem will be addressed in a future revision that includes general unit support. For single well-mixed volume simulations, a ‘unit’ volume allows rate constants to be considered to be in s<sup>-1</sup>.</p>
+<h2 id="schnakenberg">Schnakenberg</h2>
+<p>An example demonstrating limit cycle behaviour, first raised in <span class="citation">(Schnakenberg, <a href="#ref-schnakenberg79">1979</a>, p. 398)</span>. The rate constants and examples come from <span class="citation">(Erban, Chapman, &amp; Maini, <a href="#ref-erban2007">2007</a>, p. 30)</span>, and have been chosen to demonstrate stochastic behaviour that differs qualitatively from that of the corresponding deterministic system of ODEs.</p>
+<p><strong>Reaction system</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">reaction</th>
+<th align="left">rate constants</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">2<em>A</em> + <em>B</em> → 3<em>A</em></td>
+<td align="left"><em>k</em><sub>1</sub>=4×10<sup>-5</sup> s<sup>-1</sup></td>
+</tr>
+<tr class="even">
+<td align="left">∅ ⇄ <em>A</em></td>
+<td align="left"><em>k</em><sub>2</sub>=40 s<sup>-1</sup>, <em>k</em><sub>3</sub>=10 s<sup>-1</sup></td>
+</tr>
+<tr class="odd">
+<td align="left">∅ → <em>B</em></td>
+<td align="left"><em>k</em><sub>4</sub>=25 s<sup>-1</sup></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Initial conditions</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">species</th>
+<th align="left">concentration</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><em>A</em>:</td>
+<td align="left">10</td>
+</tr>
+<tr class="even">
+<td align="left"><em>B</em>:</td>
+<td align="left">10</td>
+</tr>
+</tbody>
+</table>
+<h2 id="schlögl">Schlögl</h2>
+<p>Single species model reaction model exhibiting bistable behaviour, as introduced by Schlögl in <span class="citation">(Schlögl, <a href="#ref-schlögl82">1972</a>, p. 150)</span> and discussed in <span class="citation">(Erban et al., <a href="#ref-erban2007">2007</a>, p. 29)</span>. The system exhibits two stable steady states with concentrations 100 and 400; stochastic simulation demonstrates spontaneous transition between these two states.</p>
+<p><strong>Reaction system</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">reaction</th>
+<th align="left">rate constants</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">2<em>A</em> ⇄ 3<em>A</em></td>
+<td align="left"><em>k</em><sub>1</sub>=0.18 s<sup>-1</sup>, <em>k</em><sub>2</sub>=2.5×10<sup>-4</sup> s<sup>-1</sup></td>
+</tr>
+<tr class="even">
+<td align="left">∅ ⇄ <em>A</em></td>
+<td align="left"><em>k</em><sub>3</sub>=2200 s<sup>-1</sup>, <em>k</em><sub>4</sub>=37.5 s<sup>-1</sup></td>
+</tr>
+</tbody>
+</table>
+<p>Note that this description has rescaled the reaction constants from per-minute quantities to per-second quantities.</p>
+<p><strong>Initial conditions</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">species</th>
+<th align="left">concentration</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><em>A</em>:</td>
+<td align="left">0</td>
+</tr>
+</tbody>
+</table>
+<h2 id="turing">Turing</h2>
+<p>A reaction–diffusion model exhibiting spontaneous emergence of spatial inhomogeneity, based on Turing patterns <span class="citation">(Turing, <a href="#ref-turing52">1952</a>)</span>. The example constructed in <span class="citation">(Erban et al., <a href="#ref-erban2007">2007</a>, p. 32)</span> uses the Schnakenberg reaction system with rate constants described below, on a 1-D mesh of length 1 mm, divided into 40 equal sized compartments.</p>
+<p>Note that the description in the paper expresses concentrations as counts per mesh element; the model implementation has 40 cells each of volume 25 µm<sup>3</sup>, and the reaction rates below have been scaled accordingly.</p>
+<p><strong>Reaction system</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">reaction</th>
+<th align="left">rate constants</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">2<em>A</em> + <em>B</em> → 3<em>A</em></td>
+<td align="left"><em>k</em><sub>1</sub>=6.25×10<sup>-4</sup> µm<sup>6</sup>s<sup>-1</sup></td>
+</tr>
+<tr class="even">
+<td align="left">∅ ⇄ <em>A</em></td>
+<td align="left"><em>k</em><sub>2</sub>=0.04 µm<sup>3</sup>·s<sup>-1</sup>, <em>k</em><sub>3</sub>=0.02 s<sup>-1</sup></td>
+</tr>
+<tr class="odd">
+<td align="left">∅ → <em>B</em></td>
+<td align="left"><em>k</em><sub>4</sub>=0.12 µm<sup>3</sup>·s<sup>-1</sup></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Diffusion coefficients</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">species</th>
+<th align="left">diffusivity</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><em>A</em>:</td>
+<td align="left">10<sup>-5</sup> mm<sup>2</sup>·s<sup>-1</sup></td>
+</tr>
+<tr class="even">
+<td align="left"><em>B</em>:</td>
+<td align="left">10<sup>-3</sup> mm<sup>2</sup>·s<sup>-1</sup></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Initial conditions</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">species</th>
+<th align="left">concentration</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><em>A</em>:</td>
+<td align="left">8 µm<sup>-3</td>
+</tr>
+<tr class="even">
+<td align="left"><em>B</em>:</td>
+<td align="left">0.12 µm<sup>-3</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="references" class="unnumbered">References</h2>
+<div id="refs" class="references">
+<div id="ref-erban2007">
+<p>Erban, R., Chapman, J., &amp; Maini, P. (2007). A practical guide to stochastic simulations of reaction–diffusion processes. Retrieved from <a href="http://arxiv.org/abs/0704.1908v2" class="uri">http://arxiv.org/abs/0704.1908v2</a></p>
+</div>
+<div id="ref-schlögl82">
+<p>Schlögl, F. (1972). Chemical reaction models for non-equilibrium phase transitions. <em>Zeitscrift für Physik</em>, <em>253</em>(2), 147–161.</p>
+</div>
+<div id="ref-schnakenberg79">
+<p>Schnakenberg, J. (1979). Simple chemical reaction systems with limit cycle behaviour. <em>Journal of Theoretical Biology</em>, <em>81</em>, 389–400.</p>
+</div>
+<div id="ref-turing52">
+<p>Turing, A. M. (1952). The chemical basis of morphogenesis, <em>237</em>(541), 37–72.</p>
+</div>
+</div>
+        </div>
+        <div id="footer">
+            Site generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>

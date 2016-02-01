@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Simulator concepts and exceptions</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="navigation">
+                <a href="../"><tt>rdmini</tt> home</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Simulator concepts and exceptions</h1>
+
+            <!-- use special table rendering from css -->
+<div class="concept-table">
+<h2 id="exceptions">Exceptions</h2>
+<h3 id="rdminioperation_not_supported"><code>rdmini::operation_not_supported</code></h3>
+<p>Derives from <code>std::logic_error</code></p>
+<p>Some operations described in the API below may be optional, in that they may not be practical to support in every implementation, and are not crucial in providing SSA functionality. Such operations may thus instead throw an exception of this type.</p>
+<h3 id="rdminiinvalid_value"><code>rdmini::invalid_value</code></h3>
+<p>Derives from <code>std::runtime_error</code></p>
+<p>Implementations are not obliged to perform range checking; should they do so, however, they must throw this exception when a supplied value is invalid.</p>
+<h3 id="rdminissa_error"><code>rdmini::ssa_error</code></h3>
+<p>Derives from <code>std::runtime_error</code></p>
+<p>Represents an internal error in an SSA implementation.</p>
+<h1 id="simulator-engine-interface">Simulator engine interface</h1>
+<p>Any instance <code>s</code> of a simulator implementation <code>S</code> should provide the following interface to callers.</p>
+<p>An SSA implementation may be comprise an SSA selector and SSA process system, described below.</p>
+<h2 id="types">Types</h2>
+<table>
+<thead>
+<tr class="header">
+<th align="left">name</th>
+<th align="left">type</th>
+<th align="left">description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>S::count_type</code></td>
+<td align="left">integral type</td>
+<td align="left">represents population counts</td>
+</tr>
+<tr class="even">
+<td align="left">foo</td>
+<td align="left">bar</td>
+<td align="left">baz</td>
+</tr>
+</tbody>
+</table>
+<h2 id="constants">Constants</h2>
+<table>
+<thead>
+<tr class="header">
+<th align="left">name</th>
+<th align="left">type</th>
+<th align="left">description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>S::max_process_order</code></td>
+<td align="left">unsigned integral type</td>
+<td align="left">maximum order of an (elementary) reaction</td>
+</tr>
+<tr class="even">
+<td align="left"><code>S::max_participants</code></td>
+<td align="left">unsigned integral type</td>
+<td align="left">maximum number of distinct populations affected by one reaction</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>S::dynamic_range</code></td>
+<td align="left">unsigned intgral type</td>
+<td align="left">maximum (base 2) logarithm of ratios of propensities</td>
+</tr>
+</tbody>
+</table>
+<h2 id="methods">Methods</h2>
+<p>Here <code>g</code> represents a uniform random generator, passed by reference.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">expression</th>
+<th align="left">return type</th>
+<th align="left">description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>s.initialise(M,t0)</code></td>
+<td align="left"></td>
+<td align="left">set up simulator to simulate given <code>rd_model</code> with initial sim time <code>t0</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>s.count(s,c)</code></td>
+<td align="left"><code>count_type</code></td>
+<td align="left">return population count of species index <code>s</code> in cell <code>c</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>s.set_count(s,c,k)</code></td>
+<td align="left"></td>
+<td align="left">set population count of species index <code>s</code> in cell <code>c</code> to <code>k</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>s.advance(g)</code></td>
+<td align="left">double</td>
+<td align="left">advance simulator state by minimum time step, returning new simulation time</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>s.advance(t,g)</code></td>
+<td align="left">double</td>
+<td align="left">advance simulator up to time <code>t</code>, returning new simulation time</td>
+</tr>
+</tbody>
+</table>
+<h1 id="ssa-selector-implementations">SSA selector implementations</h1>
+<p>Let <code>A</code> denote a class implementing the SSA selector API.</p>
+<h2 id="types-1">Types</h2>
+<table>
+<thead>
+<tr class="header">
+<th align="left">name</th>
+<th align="left">type</th>
+<th align="left">description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>A::key_type</code></td>
+<td align="left">implementation specific</td>
+<td align="left">keys representing individual procesess</td>
+</tr>
+<tr class="even">
+<td align="left"><code>A::value_type</code></td>
+<td align="left">floating point type</td>
+<td align="left">represents process propensities</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>A::event_type</code></td>
+<td align="left">implementation specific</td>
+<td align="left">describes generated process events</td>
+</tr>
+</tbody>
+</table>
+<h2 id="methods-1">Methods</h2>
+<p>In the following let <code>a</code> be an instance of <code>A</code>, <code>ac</code> a const instance of <code>A</code>, <code>g</code> a uniform random number generator (see section [rand.req.urng] in C++ standard), <code>n</code> an unsigned integral value, <code>k</code> a value of type <code>A::key_type</code>, <code>r</code> a value of type <code>A::value_type</code>, and <code>ev</code> an event of type <code>A::event_type</code> returned by the <code>next</code> method.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">expression</th>
+<th align="left">return type</th>
+<th align="left">description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>a.reset(n)</code></td>
+<td align="left"></td>
+<td align="left">initialise state to represent <code>n</code> processes, with initially zero propensity</td>
+</tr>
+<tr class="even">
+<td align="left"><code>a.update(k,r)</code></td>
+<td align="left"></td>
+<td align="left">set propensity of process <code>k</code> to <code>r</code>; may throw <code>rdmini::invalid_value</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>ac.size()</code></td>
+<td align="left">unsigned integral type</td>
+<td align="left">total number of represented processes</td>
+</tr>
+<tr class="even">
+<td align="left"><code>ac.propensity(k)</code></td>
+<td align="left"><code>A::value_type</code></td>
+<td align="left"><em>[optional]</em> retrieve propensity of process <code>k</code>; may throw <code>rdmini::invalid_value</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>ac.total_propensity()</code></td>
+<td align="left"><code>A::value_type</code></td>
+<td align="left"><em>[optional]</em> retrieve propensity of process <code>k</code>; may throw <code>rdmini::invalid_value</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>a.next(g)</code></td>
+<td align="left"><code>A::event_type</code></td>
+<td align="left">generate next event drawing uniformly distributed numbers from <code>g</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>ev.key()</code></td>
+<td align="left"><code>A::key_type</code></td>
+<td align="left">identifier of process in event</td>
+</tr>
+<tr class="even">
+<td align="left"><code>ev.dt()</code></td>
+<td align="left">floating point type</td>
+<td align="left">event time delta</td>
+</tr>
+</tbody>
+</table>
+<p>In practice, <code>A::key_type</code> should generally be an unsigned integral type, taking values from the range [0, <code>a.size()</code>).</p>
+<h1 id="ssa-process-system-implementation">SSA process system implementation</h1>
+<p>A process system encapsulates the dependency relations between populations and processes.</p>
+<p>For a process system of type <code>Y</code>, instance <code>y</code>.</p>
+<h2 id="types-2">Types</h2>
+<table>
+<thead>
+<tr class="header">
+<th align="left">name</th>
+<th align="left">type</th>
+<th align="left">description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>Y::key_type</code></td>
+<td align="left">implementation specific</td>
+<td align="left">keys representing individual procesess</td>
+</tr>
+<tr class="even">
+<td align="left"><code>Y::value_type</code></td>
+<td align="left">floating point type</td>
+<td align="left">represents process propensities</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>Y::count_type</code></td>
+<td align="left">integral type</td>
+<td align="left">represents population counts</td>
+</tr>
+</tbody>
+</table>
+<p>As for an SSA selector, <code>Y::key_type</code> should likely be an unsigned integral type.</p>
+<h2 id="constants-1">Constants</h2>
+<table>
+<thead>
+<tr class="header">
+<th align="left">name</th>
+<th align="left">type</th>
+<th align="left">description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>Y::max_population_index</code></td>
+<td align="left">unsigned integral</td>
+<td align="left">maximum population index</td>
+</tr>
+<tr class="even">
+<td align="left"><code>Y::max_process_order</code></td>
+<td align="left">unsigned integral</td>
+<td align="left">maximum process order</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>Y::max_participants</code></td>
+<td align="left">unsigned integral</td>
+<td align="left">maximum disrinct populations involved in a process</td>
+</tr>
+<tr class="even">
+<td align="left"><code>Y::max_count</code></td>
+<td align="left">unsigned integral</td>
+<td align="left">maximum population count</td>
+</tr>
+</tbody>
+</table>
+<h2 id="methods-2">Methods</h2>
+<p>In the follwing,</p>
+<ul>
+<li><code>k</code> is of type <code>Y::key_type</code>, representing a process identifier.</li>
+<li><code>p</code> is an unsigned integral value referencing a population.</li>
+<li><code>c</code> is of type <code>Y::count_type</code>, representing a population count.</li>
+<li><code>b</code>,<code>e</code> form an iterator range of process descriptions, where for iterators <code>i</code> in [<code>b</code>,<code>e</code>),
+<ul>
+<li><code>i-&gt;left()</code> is a collection (multiset) of population indices (reactants)</li>
+<li><code>i-&gt;right()</code> is a collection (multiset) of population indices (products)</li>
+<li><code>i-&gt;rate()</code> is the elementary process rate (convertible to <code>Y::value_type</code>.)</li>
+</ul></li>
+<li><code>notify</code> is a function object with signature equivalent to <code>void notify(key_type)</code>.</li>
+</ul>
+<table>
+<thead>
+<tr class="header">
+<th align="left">expression</th>
+<th align="left">return type</th>
+<th align="left">description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>y.clear()</code></td>
+<td align="left"></td>
+<td align="left">reset state, discarding all process information</td>
+</tr>
+<tr class="even">
+<td align="left"><code>y.defing_processes(b,e)</code></td>
+<td align="left"></td>
+<td align="left">configure system with processes described by iterator interval [<code>b</code>,<code>e</code>)</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>y.size()</code></td>
+<td align="left"></td>
+<td align="left">number of processes in system</td>
+</tr>
+<tr class="even">
+<td align="left"><code>y.zero_populations()</code></td>
+<td align="left"></td>
+<td align="left">zero population counts, invalidating all propensities</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>y.propensity(k)</code></td>
+<td align="left"><code>Y::value_type</code></td>
+<td align="left">calculate propensity for process <code>k</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>y.count(p)</code></td>
+<td align="left"><code>Y::count_type</code></td>
+<td align="left">population count for population <code>p</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>y.apply(k,notify)</code></td>
+<td align="left"></td>
+<td align="left">apply process <code>k</code> to state; call <code>notify(j)</code> for each affected process.</td>
+</tr>
+<tr class="even">
+<td align="left"><code>y.set_count(p,c,notify)</code></td>
+<td align="left"></td>
+<td align="left">set count for population <code>p</code> to <code>c</code>; call <code>notify(j)</code> for each affected process.</td>
+</tr>
+</tbody>
+</table>
+<p>As for an SSA selector, <code>Y::key_type</code> should likely be an unsigned integral type.</p>
+</div>
+<div id="refs" class="references">
+
+</div>
+        </div>
+        <div id="footer">
+            Site generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>
