@@ -64,14 +64,16 @@ elif args.format == "table":
     for result in results:
         print("%s | %d | %d" % result)
 
-    print("")
-    print("test suite | test case | failure")
-    print("-----------|-----------|--------")
+    failure_header = False
     for result in results:
         if result[0] in failures:
-            print("%s | %d | %d" % result)
             for (case,wheres) in failures[result[0]].items():
                 for where in wheres:
+                    if not failure_header:
+                        print("")
+                        print("test suite | test case | failure")
+                        print("-----------|-----------|--------")
+                        failure_header = True
                     print("%s | %s | %s" % (result[0],case,where))
 
 else:
