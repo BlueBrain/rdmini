@@ -4,8 +4,9 @@
 
 BUILD_YAML := 1
 
-# compiler: gnu, pgi, cray, or clang
-# (some compiler options depend on this variable.)
+# determine compiler options from compiler vendor:
+# gnu, pgi, cray, or clang
+# (TODO: determine from CC, CXX variables)
 
 COMPILER := gnu
 
@@ -46,30 +47,22 @@ OPTFLAGS = -O3
 
 ifeq "$(COMPILER)" "gnu"
 # gcc, g++
-CC = gcc
-CXX = g++
 CFLAGS = $(OPTFLAGS)
 CXXFLAGS = -std=c++11 $(OPTFLAGS) -fopenmp
 CXXFLAGS += -MMD -MP  # auto-generate dependencies
 LDFLAGS += -fopenmp
 else ifeq "$(COMPILER)" "clang"
 # clang, clang++
-CC = clang
-CXX = clang++
 CFLAGS = $(OPTFLAGS)
 CXXFLAGS = -std=c++11 $(OPTFLAGS) -fopenmp -Wno-logical-op-parentheses
 CXXFLAGS += -MMD -MP  # auto-generate dependencies
 LDFLAGS += -fopenmp
 # pgc, pgc++
 else ifeq "$(COMPILER)" "pgi"
-CC = pgcc
-CXX = pgc++
 CXXFLAGS = -std=c++11 $(OPTFLAGS) -mp
 LDFLAGS += -mp -lpthread
 MAKEDEPEND := 1 # dependency generation doesn't handle directory in -o
 else ifeq "$(COMPILER)" "cray"
-CC = cc
-CXX = CC
 CXXFLAGS = -h std=c++11 $(OPTFLAGS) -h omp
 MAKEDEPEND := 1 # no useful autodependency generation
 else
