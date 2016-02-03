@@ -2,8 +2,7 @@ language: cpp
 compiler: gcc
 install:
 - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi;
-script: cd build && make && make test
-after_script: ./scripts/summarise-test-xml build/test-xml/*.xml -F table
+script: (cd build && make && make test)
 addons:
   apt:
     sources:
