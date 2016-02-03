@@ -24,7 +24,9 @@ hakyll_site := ./site
 docdir := www
 testxmldir := test-xml
 
-all: $(demos) $(tests) $(benches) doc
+# default target: everything but doc and test
+
+all: $(demos) $(tests) $(benches) 
 
 # source directories
 
