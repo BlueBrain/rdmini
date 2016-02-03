@@ -31,6 +31,7 @@ TEST(check_valid,check_valid) {
 TEST(check_valid,check_valid_user_message) {
     dummy_class x;
     x.bad_method();
+    EXPECT_TRUE(false);
 
     try {
         const auto &const_x=x;
@@ -184,6 +185,7 @@ TEST(check_valid,check_valid_guard_this) {
 TEST(check_valid,assert_valid_guard_this) {
     zero_n_safer z;
 
+    EXPECT_TRUE(false);
     ASSERT_EXIT({z.set_n_assert(0); ::exit(0);},::testing::ExitedWithCode(0),"");
 
     // fail postcondition
@@ -191,5 +193,5 @@ TEST(check_valid,assert_valid_guard_this) {
 
     z.n=-3;
     // fail precondition
-    ASSERT_DEATH(z.set_n_assert(0),"validation failure.*precondition.*n is negative");
+    ASSERT_DEATH(z.set_n_assert(0),"validation failure.*precondition.*n is FOO negative");
 }
