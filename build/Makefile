@@ -1,62 +1,17 @@
 # global flags
 
+# Should we build our local copy of libyaml.a?
+
 BUILD_YAML := 1
-# compiler: gnu, pgi, cray, or clang
+
+# determine compiler options from compiler vendor:
+# gnu, pgi, cray, or clang
+# (TODO: determine from CC, CXX variables)
+
 COMPILER := gnu
 
 .PHONY: clean all realclean test bench depend doc
 .SECONDARY:
-
-# compiler flags
-
-OPTFLAGS = -O3
-#OPTFLAGS = -g -O0
-
-ifeq "$(COMPILER)" "gnu"
-# gcc, g++
-CC = gcc
-CXX = g++
-CFLAGS = $(OPTFLAGS)
-CXXFLAGS = -std=c++11 $(OPTFLAGS) -fopenmp
-CXXFLAGS += -MMD -MP  # auto-generate dependencies
-LDFLAGS += -fopenmp
-else ifeq "$(COMPILER)" "clang"
-# clang, clang++
-CC = clang
-CXX = clang++
-CFLAGS = $(OPTFLAGS)
-CXXFLAGS = -std=c++11 $(OPTFLAGS) -fopenmp -Wno-logical-op-parentheses
-CXXFLAGS += -MMD -MP  # auto-generate dependencies
-LDFLAGS += -fopenmp
-# pgc, pgc++
-else ifeq "$(COMPILER)" "pgi"
-CC = pgcc
-CXX = pgc++
-CXXFLAGS = -std=c++11 $(OPTFLAGS) -mp
-LDFLAGS += -mp -lpthread
-MAKEDEPEND := 1 # dependency generation doesn't handle directory in -o
-else ifeq "$(COMPILER)" "cray"
-CC = cc
-CXX = CC
-CXXFLAGS = -h std=c++11 $(OPTFLAGS) -h omp
-MAKEDEPEND := 1 # no useful autodependency generation
-else
-CC = __error__
-CXX = __error__
-endif
-
-# invoking pandoc
-
-ifneq ($(shell command -v pandoc-citeproc;),)
-define run_pandoc
-pandoc -s -t html $< --filter pandoc-citeproc -o $@
-endef
-else
-define run_pandoc
-@echo warning: pandoc-citeproc not found, not processing references.
-pandoc -s -t html $< -o $@
-endef
-endif
 
 # main targets
 
@@ -64,20 +19,61 @@ demos := demo_parse demo_ssa_direct demo_sim demo_timer_test
 tests := test_dummy test_modelspec test_modelspec_yaml test_ssaapi test_check_valid
 benches := 
 hakyll_site := ./site
+
+# output directories
+
 docdir := www
+testxmldir := test-xml
 
-all: $(demos) $(tests) $(benches) doc
+# default target: everything but doc and test
 
-# directories
+all: $(demos) $(tests) $(benches) 
+
+# source directories
 
 top=..
 GTEST_DIR=$(top)/gtest-1.7.0
 YAML_DIR=$(top)/yaml-0.1.6
 VPATH = $(top)
 
+# compiler flags
+
+OPTFLAGS = -O3
+#OPTFLAGS = -g -O0
+
+# compiler-specific flags: note that in
+# some environments, make depend must be
+# performed explicitly
+
+ifeq "$(COMPILER)" "gnu"
+# gcc, g++
+CFLAGS = $(OPTFLAGS)
+CXXFLAGS = -std=c++11 $(OPTFLAGS) -fopenmp
+CXXFLAGS += -MMD -MP  # auto-generate dependencies
+LDFLAGS += -fopenmp
+else ifeq "$(COMPILER)" "clang"
+# clang, clang++
+CFLAGS = $(OPTFLAGS)
+CXXFLAGS = -std=c++11 $(OPTFLAGS) -fopenmp -Wno-logical-op-parentheses
+CXXFLAGS += -MMD -MP  # auto-generate dependencies
+LDFLAGS += -fopenmp
+# pgc, pgc++
+else ifeq "$(COMPILER)" "pgi"
+CXXFLAGS = -std=c++11 $(OPTFLAGS) -mp
+LDFLAGS += -mp -lpthread
+MAKEDEPEND := 1 # dependency generation doesn't handle directory in -o
+else ifeq "$(COMPILER)" "cray"
+CXXFLAGS = -h std=c++11 $(OPTFLAGS) -h omp
+MAKEDEPEND := 1 # no useful autodependency generation
+else
+CC = __error__
+CXX = __error__
+endif
+
 CPPFLAGS += -I$(top)
 
 # need to make libyaml ourselves?
+
 ifdef BUILD_YAML
 CPPFLAGS += -I $(YAML_DIR)/include
 LDFLAGS += libyaml.a
@@ -157,10 +153,14 @@ style.csl: $(csl-stylesheet)
 doc: $(hakyll_site) style.csl
 	$(hakyll_site) rebuild -v -d $(docdir) $(top)/doc
 	
-# write docs to gh-pages branch
+# write docs to (local) gh-pages branch
 
 gh-pages: doc
-	./commit-dir -v gh-pages $(docdir)
+	$(top)/scripts/commit-dir -v gh-pages $(docdir)
+
+# publish gh-pages branch to subdirectory of remote repository
+
+publish-doc: gh-pages
 
 # dependencies
 
@@ -190,4 +190,5 @@ realclean: clean
 # run tests
 
 test: $(test_executables)
-	for file in $(tests); do ./$$file ; done
+	rm -rf $(testxmldir)
+	for file in $(tests); do ./$$file --gtest_output="xml:$(testxmldir)/"; done

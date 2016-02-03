@@ -1,0 +1,78 @@
+#!/usr/bin/python
+
+import argparse
+import re
+import xml.etree.ElementTree as ET
+
+formats = ['long', 'table', 'short']
+
+parser = argparse.ArgumentParser(description='Summarize gtest xml results.')
+parser.add_argument('files', metavar='report.xml', nargs='+', type=open,
+        help='XML test result')
+parser.add_argument('--format', '-F', dest='format', choices=formats,
+        default=formats[0], help='proivide shorter summary')
+
+
+args = parser.parse_args()
+
+parse_failure = re.compile("([^/:]+:\d+)")
+results = []
+failures = {}
+for f in args.files:
+    x = ET.parse(f)
+    for node in x.findall(".//testsuite"):
+        suite = node.get('name')
+        entry = (suite,int(node.get('failures')),int(node.get('tests')))
+        results.append(entry)
+        if suite not in failures:
+            failures[suite] = {}
+
+        for case_node in x.findall(".//testcase[failure]"):
+            case = case_node.get('name')
+            if not case in failures[suite]:
+                failures[suite][case] = []
+
+            where_list = failures[suite][case]
+            for failure_node in case_node.findall("./failure"):
+                match = parse_failure.search(failure_node.get('message'))
+                where = ''
+                if match:
+                    where=match.group(0)
+                where_list.append(where)
+    f.close()
+
+if args.format == "short":
+    ntest=0
+    nfail=0
+    for result in results:
+        nfail += result[1]
+        ntest += result[2]
+    print("fail: %d/%d" % (nfail,ntest))
+
+elif args.format == "long":
+    print('test failures:')
+    for result in results:
+        print("%s %d/%d" % result)
+        if result[0] in failures:
+            for (case,wheres) in failures[result[0]].items():
+                if wheres:
+                    print("    %s: %s" % (case,wheres[0]))
+        
+elif args.format == "table":
+    print("test suite | #failures | #tests")
+    print("-----------|-----------|-------")
+    for result in results:
+        print("%s | %d | %d" % result)
+
+    print("")
+    print("test suite | test case | failure")
+    print("-----------|-----------|--------")
+    for result in results:
+        if result[0] in failures:
+            print("%s | %d | %d" % result)
+            for (case,wheres) in failures[result[0]].items():
+                for where in wheres:
+                    print("%s | %s | %s" % (result[0],case,where))
+
+else:
+    print("unrecognized output format")
