@@ -14,6 +14,7 @@
 
 #include "rdmini/iterspan.h"
 #include "rdmini/rdmodel.h"
+#include "rdmini/tiny_multiset.h"
 #include "rdmini/exceptions.h"
 
 /** SSA process system that maintains process dependencies
@@ -24,36 +25,166 @@ template <unsigned MaxOrder=3>
 struct ssa_pp_procsys {
     typedef uint32_t key_type;
     typedef double value_type;
+    typedef uint32_t pop_type;
     typedef int32_t count_type;
 
-private:
-    typedef uint32_t pop_index;
-
-public:
     static constexpr size_t max_process_order=MaxOrder;
     static constexpr size_t max_population_index=std::numeric_limits<pop_index>::max()-1;
     static constexpr size_t max_count=std::numeric_limits<count_type>::max();
     static constexpr size_t max_participants=max_population_index;
+    static constexpr size_t max_instances=std::numeric_limits<pop_type>::max()-1;
 
-    explicit ssa_pp_procsys(size_t n_pop_=0): n_pop(n_pop_), n_proc(0) {
-        reset(n_pop);
+private:
+    /** Fundamental data structures:
+     *
+     * pop_count:
+     *     pop_count[j][p] holds population count for population index p in instance j
+     *
+     * pop_to_pc_tbl:
+     *     pop_to_pc_tbl[p] references a collection of propensity contributions for
+     *     population index p. Each contribution comprises a process index and a
+     *     a slot index, which tells us how to update the propensity calculation tables.
+     *
+     * rate:
+     *     rate[k] is the rate constant for the process k
+     *
+     * propensity_tbl:
+     *     propensity_tbl[j][k] is a (short) sequence of count_type values used to
+     *     compute (together with rate[k]) the propensity of process k in instance j
+     *
+     * proc_delta_tbl:
+     *     proc_delta_tbl[k] is a (short) sequence of pairs (p,d) that describe
+     *     which populations p should be adjusted by a delta d when the process
+     *     k is applied.
+     */
+    
+    size_t n_pop;            // number of populations
+    size_t n_proc;           // number of processes 
+    size_t n_instance;       // number of instances
+
+    std::vector<std::vector<pop_type>> pop_count;
+    std::vector<value_type> rate;
+
+    typedef std::array<count_type,max_process_order> propensity_tbl_entry;
+    std::vector<std::vector<propensity_tbl_entry>> propensity_tbl;
+
+    struct pc_entry {
+        key_type k;     // process number
+        unsigned index; // in range [0,MaxOrder)
+    };
+    std::vector<std::vector<pc_entry>> pop_to_pc_tbl;
+
+    struct pd_entry {
+        pop_type p;     // population index
+        int delta;      // change to apply
+    };
+    std::vector<std::vector<pd_entry>> proc_delta_tbl;
+
+
+    void initialise(size_t n) {
+        n_instance=n;
+        n_pop=0;
+        n_proc=0;
+
+        pop_count=std::vector<std::vector<pop_type>>(n_instance);
+        propensity_tbl=std::vector<std::vector<propensity_tbl_entry>>(n_instance);
+
+        rate.clear();
+        pop_to_pc_tbl.clear();
+        proc_delta_tbl.clear();
     }
 
-    void reset(size_t n_pop_) {
-        if (n_pop_>0 && n_pop_-1>max_population_index)
-            throw rdmini::invalid_value("population index out of bounds");
+    void extend_n_pop(n) {
+        // increase table sizes to accomodate a (larger) number of populations n.
+        if (n<=n_pop) return;
 
-        n_pop=n_pop_;
-        pop_count.resize(n_pop);
-        pop_contribs_tbl.resize(n_pop);
-        clear();
+        #pragma omp parallel for
+        for (size_t j=0;j<n_instance;++j) {
+            pop_count[j].resize(n);
+        }
+
+        pop_to_pc_tbl.resize(n);
+    }
+
+public:
+    explicit ssa_pp_procsys(size_t n_instance_=1) {
+        initialise(n_instance_);
+    }
+
+    void reset() {
+        #pragma omp parallel for
+        for (size_t j=0;j<n_instance;++j) {
+            for (size_t p=0;p<n_pop;++p) set_count(p,0,j);
+        }
+    }
+
+    template <typename ProcDesc>
+    void add(const ProcDesc &q) {
+        const auto &left=q.left();
+        const auto &right=q.right();
+
+        if (left.size()>max_process_order)
+            throw rdmini_invalid_value("too many reactants");
+
+        if (left.size()+right.size()>max_participants)
+            throw rdmini_invalid_value("too many participants");
+
+        if (n_proc>=std::numeric_limits<key_type>::max())
+            throw rdmini::invalid_value("process index out of bounds");
+
+        key_type key=n_proc++;
+        // check for unsigned overflow ...
+        if (n_proc<key) throw std::overflow_error("number of processes overflow");
+
+        tiny_multiset<pop_type,max_process_order> lpop;
+        for (auto p: left) lpop.insert(p);
+
+        std::array<count_type,max_process_order> propensity_template;
+        propensity_template.fill(1);
+
+
+        // extend pop_to_pc_tbl, pop_count to account for new populations
+        ...
+        /*
+        pop_type pop_max=std::max_element(left.begin(),left.end());
+        pop_max=std::max(std::max_element(right.begin(),rig
+        if (lpop_max>=n_pop) extend_n_pop(lpop_max+1);
+        */
+
+        
+
+
+        proc_propensity_tbl.resize(n_proc);
+        proc_propensity_tbl[key].rate=proc.rate();
+
+        std::vector<pop_index> left_sorted;
+        std::map<pop_index,count_type> delta_map;
+        for (auto p: proc.left()) {
+            if (p>=n_pop) throw rdmini::invalid_value("population index out of bounds");
+            --delta_map[p];
+            left_sorted.push_back(p);
+        }
+        for (auto p: proc.right()) {
+            if (p>=n_pop) throw rdmini::invalid_value("population index out of bounds");
+            ++delta_map[p];
+        }
+
+        proc_delta_tbl.resize(n_proc);
+        auto &pd_entry=proc_delta_tbl[key];
+        for (auto pd: delta_map)
+           if (pd.second) pd_entry.push_back({pd.first,pd.second});
+
+        std::sort(left_sorted.begin(),left_sorted.end());
+        uint32_t index=0;
+        for (auto p: left_sorted) {
+            pop_contribs_tbl[p].emplace_back(key,index++);
+        }
+        
     }
 
     template <typename In>
-    void define_processes(In b,In e) {
-        clear();
-        while (b!=e) add_proc(*b++);
-        zero_populations();
+    void add(In b,In e) {
+        while (b!=e) add(*b++);
     }
 
     /** Remove all processes, population counts */
