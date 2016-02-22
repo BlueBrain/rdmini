@@ -170,7 +170,7 @@ expression | return type | description
 `y.size()`  | `size_t`       | number of processes in system
 `y.n_instances()` | `size_t` | number of instances
 `y.reset()` |                | zero population counts across all instances
-`y.propensity(j,k)` | `Y::value_type` | calculate propensity for process `k` in instance `j`
+`y.propensity(k,j)` | `Y::value_type` | calculate propensity for process `k` in instance `j`
 `y.count(p,j)`  | `Y::count_type` | population count for population `p` in instance `j`
 `y.count(p)`  | `Y::count_type` | equivalent to `y.count(p,0)`
 `y.set_count(p,c,notify,j)` | | set count for population `p` to `c` in instance `j`; call `notify(u)` for each affected process `u`

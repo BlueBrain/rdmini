@@ -2,10 +2,10 @@
 #include <cmath>
 #include <gtest/gtest.h>
 
-#include "tiny_map.h"
+#include "rdmini/small_map.h"
 
 template <typename T>
-class small_map: public ::testing::Test {
+class smallmap: public ::testing::Test {
 public:
     typedef typename T::value_type value_type;
 };
@@ -36,10 +36,10 @@ struct int_nontrivial {
 
 
 using map_types=::testing::Types<small_map<int,int>,small_map<int_nontrivial,int_nontrivial>>;
-TYPED_TEST_CASE(small_map,map_types);
+TYPED_TEST_CASE(smallmap,map_types);
 
 
-TYPED_TEST(small_map,ctor) {
+TYPED_TEST(smallmap,ctor) {
     using value_type=typename TestFixture::value_type;
     using map=TypeParam;
 
@@ -71,7 +71,7 @@ TYPED_TEST(small_map,ctor) {
     ASSERT_EQ(g_dtor_count,g_ctor_count);
 }
 
-TYPED_TEST(small_map,empty) {
+TYPED_TEST(smallmap,empty) {
     using map=TypeParam;
 
     map m;
@@ -80,7 +80,7 @@ TYPED_TEST(small_map,empty) {
     ASSERT_EQ(0,m.size());
 }
 
-TYPED_TEST(small_map,clear) {
+TYPED_TEST(smallmap,clear) {
     using map=TypeParam;
 
     reset_counts();
@@ -94,7 +94,7 @@ TYPED_TEST(small_map,clear) {
     ASSERT_EQ(g_dtor_count,g_ctor_count);
 }
 
-TYPED_TEST(small_map,equality) {
+TYPED_TEST(smallmap,equality) {
     using map=TypeParam;
     
     map m1({{1,1},{3,2},{4,1},{3,7}});
@@ -107,7 +107,7 @@ TYPED_TEST(small_map,equality) {
     ASSERT_NE(m1,m4);
 }
 
-TYPED_TEST(small_map,insert) {
+TYPED_TEST(smallmap,insert) {
     using value_type=typename TestFixture::value_type;
     using map=TypeParam;
 
@@ -127,7 +127,7 @@ TYPED_TEST(small_map,insert) {
     ASSERT_EQ(g_dtor_count,g_ctor_count);
 }
 
-TYPED_TEST(small_map,swap) {
+TYPED_TEST(smallmap,swap) {
     using map=TypeParam;
 
     reset_counts();
@@ -151,7 +151,7 @@ TYPED_TEST(small_map,swap) {
     ASSERT_EQ(g_dtor_count,g_ctor_count);
 }
 
-TYPED_TEST(small_map,count) {
+TYPED_TEST(smallmap,count) {
     using map=TypeParam;
 
     map m1({{1,2},{3,2},{3,5},{4,5}});
@@ -162,7 +162,7 @@ TYPED_TEST(small_map,count) {
     ASSERT_EQ(0,m1.count(5));
 }
 
-TYPED_TEST(small_map,erase) {
+TYPED_TEST(smallmap,erase) {
     using map=TypeParam;
 
     reset_counts();
@@ -178,7 +178,7 @@ TYPED_TEST(small_map,erase) {
     ASSERT_EQ(g_dtor_count,g_ctor_count);
 }
 
-TYPED_TEST(small_map,iter_erase) {
+TYPED_TEST(smallmap,iter_erase) {
     using value_type=typename TestFixture::value_type;
     using map=TypeParam;
 
@@ -205,7 +205,7 @@ TYPED_TEST(small_map,iter_erase) {
     ASSERT_EQ(g_dtor_count,g_ctor_count);
 }
 
-TYPED_TEST(small_map,bracket) {
+TYPED_TEST(smallmap,bracket) {
     using map=TypeParam;
 
     reset_counts();
@@ -225,7 +225,7 @@ TYPED_TEST(small_map,bracket) {
     ASSERT_EQ(g_dtor_count,g_ctor_count);
 }
 
-TYPED_TEST(small_map,at) {
+TYPED_TEST(smallmap,at) {
     using map=TypeParam;
 
     reset_counts();
@@ -253,5 +253,48 @@ TYPED_TEST(small_map,at) {
     }
 
     ASSERT_EQ(g_dtor_count,g_ctor_count);
+}
+
+template <typename T>
+class smallmap_nonstd_eq: public ::testing::Test {
+public:
+    typedef typename T::key_equal key_equal;
+    typedef typename T::value_type value_type;
+};
+
+// non-standard stateful equality functor
+struct eq_mod_k {
+    eq_mod_k(): k(2) {}
+    explicit eq_mod_k(int k_): k(k_) {}
+    bool operator()(int a,int b) const { return std::abs(a-b)%k==0; }
+
+    int k;
+};
+
+using map_nonstd_eq_types=::testing::Types<small_map<int,int,eq_mod_k>,small_map<int_nontrivial,int_nontrivial,eq_mod_k>>;
+TYPED_TEST_CASE(smallmap_nonstd_eq,map_nonstd_eq_types);
+
+TYPED_TEST(smallmap_nonstd_eq,count) {
+    using map=TypeParam;
+
+    // default eq_mod_k is mod 2 (i.e. equal if same parity)
+    map m1({{1,2},{3,4},{4,5}});
+    ASSERT_EQ(2,m1.size());
+    ASSERT_EQ(4,m1.at(3));
+    ASSERT_EQ(4,m1.at(1));
+    
+    // test with stateful eq_mod_k, k==3
+    map m2({{1,2},{2,3},{3,4},{4,5}},eq_mod_k(3));
+    ASSERT_EQ(3,m2.size());
+    ASSERT_EQ(5,m2.at(1));
+}
+
+TYPED_TEST(smallmap_nonstd_eq,key_eq) {
+    using key_equal=typename TestFixture::key_equal;
+    using map=TypeParam;
+
+    map m({{1,2},{2,3},{3,4},{4,5}},eq_mod_k(3));
+    key_equal eq=m.key_eq();
+    ASSERT_EQ(3,eq.k);
 }
 
