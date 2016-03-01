@@ -16,7 +16,7 @@
 
 #include "rdmini/iterspan.h"
 #include "rdmini/rdmodel.h"
-#include "rdmini/tiny_multiset.h"
+#include "rdmini/small_map.h"
 #include "rdmini/exceptions.h"
 
 /** SSA process system that maintains process dependencies
@@ -31,7 +31,7 @@ struct ssa_pp_procsys {
     typedef int32_t count_type;
 
     static constexpr size_t max_process_order=MaxOrder;
-    static constexpr size_t max_population_index=std::numeric_limits<pop_index>::max()-1;
+    static constexpr size_t max_population_index=std::numeric_limits<pop_type>::max()-1;
     static constexpr size_t max_count=std::numeric_limits<count_type>::max();
     static constexpr size_t max_participants=max_population_index;
     static constexpr size_t max_instances=std::numeric_limits<pop_type>::max()-1;
@@ -87,6 +87,11 @@ private:
     };
     std::vector<std::vector<pd_entry>> proc_delta_tbl;
 
+    template <typename F>
+    void apply_contrib_update(const pc_entry &pc,count_type d,F notify,size_t j) {
+        propensity_tbl[j][pc.k][pc.index]+=d;
+        notify(pc.k);
+    }
 
     void initialise(size_t n) {
         n_instance=n;
@@ -127,16 +132,16 @@ public:
 
         small_map<pop_type,int> proc_delta_entry;
         std::array<count_type,max_process_order> left_sorted;
-        size_t nleft=0;
+        unsigned nleft=0;
 
-        pop_type max_pop=n_pop;
+        pop_type max_pop=0;
         for (auto p: q.left()) {
             if (nleft>max_process_order)
-                throw rdmini_invalid_value("too many reactants");
+                throw rdmini::invalid_value("too many reactants");
 
             --proc_delta_entry[p];
             if (proc_delta_entry.size()>max_participants)
-                throw rdmini_invalid_value("too many participants");
+                throw rdmini::invalid_value("too many participants");
 
             left_sorted[nleft++]=p;
             if (p>max_pop) max_pop=p;
@@ -146,44 +151,50 @@ public:
         for (auto p: q.right()) {
             ++proc_delta_entry[p];
             if (proc_delta_entry.size()>max_participants)
-                throw rdmini_invalid_value("too many participants");
+                throw rdmini::invalid_value("too many participants");
 
             if (p>max_pop) max_pop=p;
         }
 
         // extend population-indexed data structures if required
-        if (max_pop>n_pop) {
+        if (max_pop>=n_pop) {
+            n_pop=max_pop+1;
+
             #pragma omp parallel for
             for (size_t j=0;j<n_instance;++j) {
-                pop_count[j].resize(max_pop);
+                pop_count[j].resize(n_pop);
             }
-
-            pop_to_pc_tbl.resize(max_pop);
-            n_pop=max_pop;
+            pop_to_pc_tbl.resize(n_pop);
         }
 
         // update proc_delta_tbl:
         proc_delta_tbl.emplace_back(proc_delta_entry.begin(),proc_delta_entry.end());
 
         // update pop_to_pc_tbl and propensity_tbl
-        propensity_tbl_entry prop_entry;
-        std::fill(prop_entry.begin(),prop_entry.end(),1);
-
-        count_type c=0; // population contribution to propensity
-        pop_type p_prev=0;
-        for (size_t i=0;i<nleft;++i) {
+        for (unsigned i=0;i<nleft;++i) {
             pop_type p=left_sorted[i];
-            pop_to_pc_tbl[p].emplace_back(key,i);
-
-            if (i==0 || p!=p_prev) c=pop_count[p];
-            else --c;
-
-            prop_entry[i]=c;
+            pc_entry pc={key,i};
+            pop_to_pc_tbl[p].push_back(pc);
         }
 
         #pragma omp parallel for
-        for (size_t j=0;j<n_instance;++j) 
+        for (size_t j=0;j<n_instance;++j) {
+            propensity_tbl_entry prop_entry;
+
+            count_type c=0; // population contribution to propensity
+            pop_type p_prev=0;
+            for (unsigned i=0;i<nleft;++i) {
+                pop_type p=left_sorted[i];
+
+                if (i==0 || p!=p_prev) c=pop_count[j][p];
+                else --c;
+
+                prop_entry[i]=c;
+            }
+
+            std::fill(prop_entry.begin(),prop_entry.end(),1);
             propensity_tbl[j].push_back(prop_entry);
+        }
 
         rate.push_back(q.rate());
 
@@ -196,22 +207,20 @@ public:
 
     /** Remove all processes, population counts */
     void clear() {
-        proc_propensity_tbl.clear();
-        for (auto &entry: pop_contribs_tbl) entry.clear();
-
-        pop_count.assign(n_pop,0);
-        rate.clear();
+        initialise(n_instance);
     }
 
     size_t size() const { return n_proc; }
     
-    count_type count(size_t p) const { return pop_count[p]; }
+    count_type count(size_t p,size_t j=0) const { return pop_count[j][p]; }
+
+    const std::vector<pop_type> &counts(size_t j=0) const { return pop_count[j]; }
 
     template <typename F>
     void set_count(size_t p,count_type c,F update_notify,size_t j=0) {
-        for (auto kci: pop_to_pc_tbl[p])
-            apply_contrib_update(kci,c-pop_count[p],update_notify,j);
-        pop_count[p]=c;
+        for (const auto &pc: pop_to_pc_tbl[p])
+            apply_contrib_update(pc,c-pop_count[j][p],update_notify,j);
+        pop_count[j][p]=c;
     }
 
     void set_count(size_t p,count_type c,size_t j=0) { set_count(p,c,[](key_type) {},j); }
@@ -219,18 +228,18 @@ public:
     template <typename F>
     void apply(key_type k,F update_notify,size_t j=0) {
         for (auto pd: proc_delta_tbl[k]) {
-            for (auto kci: pop_to_pc_tbl[pd.p])
-                apply_contrib_update(kci,pd.delta,update_notify,j);
-            pop_count[pd.p]+=pd.delta;
+            for (const auto &pc: pop_to_pc_tbl[pd.p])
+                apply_contrib_update(pc,pd.delta,update_notify,j);
+            pop_count[j][pd.p]+=pd.delta;
         }
     }
 
     void apply(key_type k,size_t j=0) { apply(k,[](key_type) {},j); }
 
     value_type propensity(key_type k,size_t j=0) {
-        const proc_propensity_entry &kp=proc_propensity_tbl[j][k];
+        const propensity_tbl_entry &kp=propensity_tbl[j][k];
         value_type r=rate[k];
-        for (auto c: kp.counts) r*=c;
+        for (auto c: kp) r*=c;
         return r;
     }
 
@@ -241,9 +250,9 @@ public:
         size_t idx=0;
         for (const auto &e: sys.pop_to_pc_tbl) {
             O << "    " << std::setw(6) << std::right << idx++ << ":";
-            for (const auto &kci: e) 
-                O << ' ' << kci.k  << ':'
-                  << std::showpos << kci.i << std::noshowpos;
+            for (const auto &pc: e) 
+                O << ' ' << pc.k  << ':'
+                  << std::showpos << pc.index << std::noshowpos;
             O << "\n";
         }
         O << "proc_delta_tbl:\n";

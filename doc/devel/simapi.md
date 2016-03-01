@@ -67,11 +67,15 @@ expression | return type | description
 `s.initialise(n,M,t0)` |  | set up simulator to simulate `n` instances of the given `rd_model` `M` with initial simulation time `t0`
 `s.count(s,c,j)` | `count_type` | population count of species index `s` in cell `c` in instance `j`
 `s.count(s,c)`   | `count_type` | equivalent to `s.count(s,c,0)`
+`s.counts(j)`    | implementaiton specific | return population counts of instance `j` as an iterable collection
 `s.set_count(s,c,k,j)` |  | set population count of species index `s` in cell `c` to `k` in instance `j`
 `s.set_count(s,c,k)`   |  | equivalent to `s.set_count(s,c,k,0)`
 `s.advance(g)` | double   | *[optional]* advance simulator state by minimum time step, returning new simulation time
 `s.advance(t,g)` | double | advance simulator up to time `t`, returning new simulation time
 
+Population counts returned by `s.counts(j)` are ordered such that the population of species `s` in
+cell `c` is stored in the `c`·*S*+`s` element, where $S$ is the number of species.
+Note that non-const operations on `s` may invalidate the collection returned by `s.counts(j)`.
 
 ## SSA selector implementations
 
@@ -173,6 +177,7 @@ expression | return type | description
 `y.propensity(k,j)` | `Y::value_type` | calculate propensity for process `k` in instance `j`
 `y.count(p,j)`  | `Y::count_type` | population count for population `p` in instance `j`
 `y.count(p)`  | `Y::count_type` | equivalent to `y.count(p,0)`
+`y.counts(j)`    | implementaiton specific | return population counts of instance `j` as an iterable collection
 `y.set_count(p,c,notify,j)` | | set count for population `p` to `c` in instance `j`; call `notify(u)` for each affected process `u`
 `y.set_count(p,c,notify)` |  | equivalent to `y.set_count(p,c,notify,0)`
 `y.apply(k,notify,j)` |      | apply process `k` to state of instance `j`; call `notify(u)` for each affected process `u`.
@@ -181,4 +186,6 @@ expression | return type | description
 As for an SSA selector, `Y::key_type` should likely be an unsigned integral type.
 Adding a process to a process system may or may not preserve population counts — this is a quality
 of implementation issue.
+
+Note that non-const operations on `y` may invalidate the collection returned by `y.counts(j)`.
 </div>

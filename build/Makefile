@@ -38,7 +38,7 @@ VPATH = $(top)
 
 # compiler flags
 
-OPTFLAGS = -O3
+OPTFLAGS = -g -O3
 #OPTFLAGS = -g -O0
 
 # compiler-specific flags: note that in
