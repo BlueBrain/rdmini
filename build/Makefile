@@ -16,7 +16,7 @@ COMPILER := gnu
 # main targets
 
 demos := demo_parse demo_ssa_direct demo_sim demo_timer_test
-tests := test_dummy test_modelspec test_modelspec_yaml test_ssaapi test_check_valid
+tests := test_small_map test_modelspec test_modelspec_yaml test_ssaapi test_check_valid
 benches := 
 hakyll_site := ./site
 
@@ -38,7 +38,7 @@ VPATH = $(top)
 
 # compiler flags
 
-OPTFLAGS = -O3
+OPTFLAGS = -g -O3
 #OPTFLAGS = -g -O0
 
 # compiler-specific flags: note that in

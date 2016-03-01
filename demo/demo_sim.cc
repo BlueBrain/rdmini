@@ -191,14 +191,17 @@ struct emit_sim {
         }
         else {
             // consider exposing access to ssa population counts by population index directly
-            size_t offset=batch_count_data.size();
-            batch_sample b={instance, t, offset}; 
-            batch_samples.push_back(b);
-
             #pragma omp critical
             {
+                size_t offset=batch_count_data.size();
+                batch_sample b={instance, t, offset}; 
+                batch_samples.push_back(b);
+
                 batch_count_data.resize(offset+batch_sample_width);
-                sim.copy_counts(instance,&batch_count_data[offset]);
+                const auto &counts=sim.counts(instance);
+
+                assert(batch_sample_width==counts.size());
+                std::copy(counts.begin(),counts.end(),&batch_count_data[offset]);
             }
         }
 	return O;
@@ -211,12 +214,9 @@ struct emit_sim {
         O << header;
         for (const auto &sample: batch_samples) {
             size_t offset=sample.count_data_offset;
-            for (size_t i=0; i<batch_sample_width; ++i) {
-                auto sc=sim.pop_to_species_id(i);
-                O << sample.instance << ',' << sample.t << ','
-                  << sc.second << ',' << sc.first << ','
-                  << batch_count_data[offset++];
-
+            for (size_t cell=0; cell<n_cells; ++cell) {
+                O << sample.instance << ',' << sample.t << ',' << cell;
+                for (size_t s=0; s<n_species; ++s) O << ',' << batch_count_data[offset++];
                 O << '\n';
             }
         }
