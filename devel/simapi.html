@@ -30,7 +30,7 @@
 <!-- use special table rendering from css -->
 <div class="concept-table">
 <p>Any instance <code>s</code> of a simulator implementation <code>S</code> should provide the following interface to callers.</p>
-<p>An SSA implementation may be comprise an SSA selector and SSA process system, described below.</p>
+<p>An SSA simulator engine may be comprised of an SSA selector and SSA process system, as described below.</p>
 <h3 id="types">Types</h3>
 <table>
 <thead>
@@ -45,11 +45,6 @@
 <td align="left"><code>S::count_type</code></td>
 <td align="left">integral type</td>
 <td align="left">represents population counts</td>
-</tr>
-<tr class="even">
-<td align="left">foo</td>
-<td align="left">bar</td>
-<td align="left">baz</td>
 </tr>
 </tbody>
 </table>
@@ -74,14 +69,28 @@
 <td align="left">maximum number of distinct populations affected by one reaction</td>
 </tr>
 <tr class="odd">
+<td align="left"><code>S::max_instances</code></td>
+<td align="left">unsigned integral type</td>
+<td align="left">maximum number of simulation instances</td>
+</tr>
+<tr class="even">
 <td align="left"><code>S::dynamic_range</code></td>
-<td align="left">unsigned intgral type</td>
+<td align="left">unsigned integral type</td>
 <td align="left">maximum (base 2) logarithm of ratios of propensities</td>
 </tr>
 </tbody>
 </table>
 <h3 id="methods">Methods</h3>
-<p>Here <code>g</code> represents a uniform random generator, passed by reference.</p>
+<p>In the following,</p>
+<ul>
+<li><code>g</code> represents a uniform random generator, passed by reference,</li>
+<li><code>t</code> is of type <code>double</code>,</li>
+<li><code>s</code> is an unsigned integral value representing a species index,</li>
+<li><code>c</code> is an unsigned integral value representing a cell index,</li>
+<li><code>k</code> is a population count of type <code>S::count_type</code>,</li>
+<li><code>n</code> is an unsigned integral value representing a number of instances,</li>
+<li><code>j</code> is an unsigned integral value representing a particular instance.</li>
+</ul>
 <table>
 <thead>
 <tr class="header">
@@ -92,32 +101,48 @@
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left"><code>s.initialise(M,t0)</code></td>
+<td align="left"><code>s.initialise(n,M,t0)</code></td>
 <td align="left"></td>
-<td align="left">set up simulator to simulate given <code>rd_model</code> with initial sim time <code>t0</code></td>
+<td align="left">set up simulator to simulate <code>n</code> instances of the given <code>rd_model</code> <code>M</code> with initial simulation time <code>t0</code></td>
 </tr>
 <tr class="even">
+<td align="left"><code>s.count(s,c,j)</code></td>
+<td align="left"><code>count_type</code></td>
+<td align="left">population count of species index <code>s</code> in cell <code>c</code> in instance <code>j</code></td>
+</tr>
+<tr class="odd">
 <td align="left"><code>s.count(s,c)</code></td>
 <td align="left"><code>count_type</code></td>
-<td align="left">return population count of species index <code>s</code> in cell <code>c</code></td>
-</tr>
-<tr class="odd">
-<td align="left"><code>s.set_count(s,c,k)</code></td>
-<td align="left"></td>
-<td align="left">set population count of species index <code>s</code> in cell <code>c</code> to <code>k</code></td>
+<td align="left">equivalent to <code>s.count(s,c,0)</code></td>
 </tr>
 <tr class="even">
-<td align="left"><code>s.advance(g)</code></td>
-<td align="left">double</td>
-<td align="left">advance simulator state by minimum time step, returning new simulation time</td>
+<td align="left"><code>s.counts(j)</code></td>
+<td align="left">implementaiton specific</td>
+<td align="left">return population counts of instance <code>j</code> as an iterable collection</td>
 </tr>
 <tr class="odd">
+<td align="left"><code>s.set_count(s,c,k,j)</code></td>
+<td align="left"></td>
+<td align="left">set population count of species index <code>s</code> in cell <code>c</code> to <code>k</code> in instance <code>j</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>s.set_count(s,c,k)</code></td>
+<td align="left"></td>
+<td align="left">equivalent to <code>s.set_count(s,c,k,0)</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>s.advance(g)</code></td>
+<td align="left">double</td>
+<td align="left"><em>[optional]</em> advance simulator state by minimum time step, returning new simulation time</td>
+</tr>
+<tr class="even">
 <td align="left"><code>s.advance(t,g)</code></td>
 <td align="left">double</td>
 <td align="left">advance simulator up to time <code>t</code>, returning new simulation time</td>
 </tr>
 </tbody>
 </table>
+<p>Population counts returned by <code>s.counts(j)</code> are ordered such that the population of species <code>s</code> in cell <code>c</code> is stored in the <code>c</code>·<em>S</em>+<code>s</code> element, where <span class="math inline"><em>S</em></span> is the number of species. Note that non-const operations on <code>s</code> may invalidate the collection returned by <code>s.counts(j)</code>.</p>
 <h2 id="ssa-selector-implementations">SSA selector implementations</h2>
 <p>Let <code>A</code> denote a class implementing the SSA selector API.</p>
 <h3 id="types-1">Types</h3>
@@ -202,7 +227,7 @@
 </table>
 <p>In practice, <code>A::key_type</code> should generally be an unsigned integral type, taking values from the range [0, <code>a.size()</code>).</p>
 <h2 id="ssa-process-system-implementation">SSA process system implementation</h2>
-<p>A process system encapsulates the dependency relations between populations and processes.</p>
+<p>A process system encapsulates the dependency relations between populations and processes, and maintains the state of populations and processes across one or more independent instances.</p>
 <p>For a process system of type <code>Y</code>, instance <code>y</code>.</p>
 <h3 id="types-2">Types</h3>
 <table>
@@ -225,13 +250,45 @@
 <td align="left">represents process propensities</td>
 </tr>
 <tr class="odd">
+<td align="left"><code>Y::pop_type</code></td>
+<td align="left">integral type</td>
+<td align="left">represents population indices</td>
+</tr>
+<tr class="even">
 <td align="left"><code>Y::count_type</code></td>
 <td align="left">integral type</td>
 <td align="left">represents population counts</td>
 </tr>
 </tbody>
 </table>
-<p>As for an SSA selector, <code>Y::key_type</code> should likely be an unsigned integral type.</p>
+<p>As for an SSA selector, <code>Y::key_type</code> and <code>Y::pop_type</code> should likely be unsigned integral types.</p>
+<p>Individual processes are described by a process description <code>p</code> which offers methods according to the following:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">expression</th>
+<th align="left">type</th>
+<th align="left">description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>p.left()</code></td>
+<td align="left">collection of <code>Y::pop_type</code></td>
+<td align="left">(multi-)set of population indices consumed by process</td>
+</tr>
+<tr class="even">
+<td align="left"><code>p.right()</code></td>
+<td align="left">collection of <code>Y::pop_type</code></td>
+<td align="left">(multi-)set of population indices produced by process</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>p.rate()</code></td>
+<td align="left"><code>Y::value_type</code></td>
+<td align="left">elementary process rate</td>
+</tr>
+</tbody>
+</table>
 <h3 id="constants-1">Constants</h3>
 <table>
 <thead>
@@ -262,21 +319,24 @@
 <td align="left">unsigned integral</td>
 <td align="left">maximum population count</td>
 </tr>
+<tr class="odd">
+<td align="left"><code>Y::max_instances</code></td>
+<td align="left">integral type</td>
+<td align="left">maximum number of system instances</td>
+</tr>
 </tbody>
 </table>
 <h3 id="methods-2">Methods</h3>
-<p>In the follwing,</p>
+<p>In the following,</p>
 <ul>
-<li><code>k</code> is of type <code>Y::key_type</code>, representing a process identifier.</li>
-<li><code>p</code> is an unsigned integral value referencing a population.</li>
-<li><code>c</code> is of type <code>Y::count_type</code>, representing a population count.</li>
-<li><code>b</code>,<code>e</code> form an iterator range of process descriptions, where for iterators <code>i</code> in [<code>b</code>,<code>e</code>),
-<ul>
-<li><code>i-&gt;left()</code> is a collection (multiset) of population indices (reactants)</li>
-<li><code>i-&gt;right()</code> is a collection (multiset) of population indices (products)</li>
-<li><code>i-&gt;rate()</code> is the elementary process rate (convertible to <code>Y::value_type</code>.)</li>
-</ul></li>
-<li><code>notify</code> is a function object with signature equivalent to <code>void notify(key_type)</code>.</li>
+<li><code>k</code> is of type <code>Y::key_type</code>, representing a process identifier,</li>
+<li><code>p</code> is an unsigned integral value referencing a population,</li>
+<li><code>c</code> is of type <code>Y::count_type</code>, representing a population count,</li>
+<li><code>q</code> is a process description,</li>
+<li><code>b</code>,<code>e</code> form an iterator range of process descriptions,</li>
+<li><code>n</code> is an unsigned integral value representing a number of instances,</li>
+<li><code>j</code> is an unsigned integral value representing a particular instance,</li>
+<li><code>notify</code> is a function or functional object with signature equivalent to <code>void notify(key_type)</code>.</li>
 </ul>
 <table>
 <thead>
@@ -288,48 +348,89 @@
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left"><code>y.clear()</code></td>
+<td align="left"><code>y.initialise(n)</code></td>
 <td align="left"></td>
-<td align="left">reset state, discarding all process information</td>
+<td align="left">initialise state for <code>n</code> instances and</td>
 </tr>
 <tr class="even">
-<td align="left"><code>y.defing_processes(b,e)</code></td>
+<td align="left"><code>y.clear()</code></td>
+<td align="left"></td>
+<td align="left">remove all processes</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>y.add(q)</code></td>
+<td align="left"></td>
+<td align="left">add process with description <code>q</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>y.add(b,e)</code></td>
+<td align="left"></td>
+<td align="left">add processes described by iterator interval [<code>b</code>,<code>e</code>)</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>y.define_processes(b,e)</code></td>
 <td align="left"></td>
 <td align="left">configure system with processes described by iterator interval [<code>b</code>,<code>e</code>)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left"><code>y.size()</code></td>
-<td align="left"></td>
+<td align="left"><code>size_t</code></td>
 <td align="left">number of processes in system</td>
 </tr>
+<tr class="odd">
+<td align="left"><code>y.n_instances()</code></td>
+<td align="left"><code>size_t</code></td>
+<td align="left">number of instances</td>
+</tr>
 <tr class="even">
-<td align="left"><code>y.zero_populations()</code></td>
+<td align="left"><code>y.reset()</code></td>
 <td align="left"></td>
-<td align="left">zero population counts, invalidating all propensities</td>
+<td align="left">zero population counts across all instances</td>
 </tr>
 <tr class="odd">
-<td align="left"><code>y.propensity(k)</code></td>
+<td align="left"><code>y.propensity(k,j)</code></td>
 <td align="left"><code>Y::value_type</code></td>
-<td align="left">calculate propensity for process <code>k</code></td>
+<td align="left">calculate propensity for process <code>k</code> in instance <code>j</code></td>
 </tr>
 <tr class="even">
+<td align="left"><code>y.count(p,j)</code></td>
+<td align="left"><code>Y::count_type</code></td>
+<td align="left">population count for population <code>p</code> in instance <code>j</code></td>
+</tr>
+<tr class="odd">
 <td align="left"><code>y.count(p)</code></td>
 <td align="left"><code>Y::count_type</code></td>
-<td align="left">population count for population <code>p</code></td>
+<td align="left">equivalent to <code>y.count(p,0)</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>y.counts(j)</code></td>
+<td align="left">implementaiton specific</td>
+<td align="left">return population counts of instance <code>j</code> as an iterable collection</td>
 </tr>
 <tr class="odd">
-<td align="left"><code>y.apply(k,notify)</code></td>
+<td align="left"><code>y.set_count(p,c,notify,j)</code></td>
 <td align="left"></td>
-<td align="left">apply process <code>k</code> to state; call <code>notify(j)</code> for each affected process.</td>
+<td align="left">set count for population <code>p</code> to <code>c</code> in instance <code>j</code>; call <code>notify(u)</code> for each affected process <code>u</code></td>
 </tr>
 <tr class="even">
 <td align="left"><code>y.set_count(p,c,notify)</code></td>
 <td align="left"></td>
-<td align="left">set count for population <code>p</code> to <code>c</code>; call <code>notify(j)</code> for each affected process.</td>
+<td align="left">equivalent to <code>y.set_count(p,c,notify,0)</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>y.apply(k,notify,j)</code></td>
+<td align="left"></td>
+<td align="left">apply process <code>k</code> to state of instance <code>j</code>; call <code>notify(u)</code> for each affected process <code>u</code>.</td>
+</tr>
+<tr class="even">
+<td align="left"><code>y.apply(k,notify)</code></td>
+<td align="left"></td>
+<td align="left">equivalent to <code>y.apply(k,notify,0)</code></td>
 </tr>
 </tbody>
 </table>
-<p>As for an SSA selector, <code>Y::key_type</code> should likely be an unsigned integral type.</p>
+<p>As for an SSA selector, <code>Y::key_type</code> should likely be an unsigned integral type. Adding a process to a process system may or may not preserve population counts — this is a quality of implementation issue.</p>
+<p>Note that non-const operations on <code>y</code> may invalidate the collection returned by <code>y.counts(j)</code>.</p>
 </div>
 <div id="refs" class="references">
 
