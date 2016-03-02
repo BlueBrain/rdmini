@@ -6,11 +6,18 @@ Test platform for stochastic reaction-diffusion implementations.
 
 `rdmini` source and documentation is licensed under the
 [GPL v2 license](http://www.gnu.org/licenses/gpl-2.0.txt)
-(see the `LICENSE.txt` file.) The CSL style file
-`doc/style.csl` is the APA 5th edition style from the
+(see the `LICENSE.txt` file.)
+
+The CSL style file `doc/style.csl` is the APA 5th edition style from the
 [CSL style repository](http://citationstyles.org/styles/)
 and is licensed under the Creative Commons
 [Attribution-ShareAlike license](http://creativecommons.org/licenses/by-sa/3.0/).
+
+The `libyaml` YAML parsing library is licensed under the MIT
+license; refer to the included `yaml-0.1.6/LICENSE` file for details.
+
+`gtest` is licensed under the Revised BSD license; refer to the
+included `gtest-1.7.0/LICENSE` file for details.
 
 ## Building
 
@@ -34,6 +41,11 @@ and test and demo executables in this directory.
 
 Temporary build artefacts are removed with `make clean`, and all
 built objects are removed with `make realclean`.
+
+The executables and tests will (should) build without any
+tinkering with gcc version 5 or later. Other compilers may
+require modification of the Makefile; more information can
+be found in the [documentation](https://bluebrain.github.io/rdmini/).
 
 # Demo software
 
