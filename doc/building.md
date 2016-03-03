@@ -18,8 +18,11 @@ The top-level directories in the `rdmini` project are organised as follows:
 `gtest-1.7.0/`
   ~ Google test sources.
 
-`rdmini/`
-  ~ Source and headers for `rdmini` core functionality.
+`src/`
+  ~ Source and internal headers for `rdmini` core functionality.
+
+`include/rdmini/`
+  ~ Public headers for `rdmini`.
 
 `scripts/`
   ~ Miscellaneous scripts used in the build process or for parsing results.

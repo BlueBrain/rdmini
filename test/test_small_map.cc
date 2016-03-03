@@ -2,7 +2,7 @@
 #include <cmath>
 #include <gtest/gtest.h>
 
-#include "rdmini/small_map.h"
+#include "rdmini/util/small_map.h"
 
 template <typename T>
 class smallmap: public ::testing::Test {

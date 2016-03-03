@@ -10,7 +10,10 @@
 #include "rdmini/parallel_ssa.h"
 #include "rdmini/rdmini_version.h"
 
-const char *demo_sim_version="0.0.1";
+const char *demo_sim_version="0.0.2";
+
+// fix maximum order of reactions here:
+using ssa=parallel_ssa<3>;
 
 // throw to clean-up and exit
 struct fatal_error: std::exception {
@@ -238,7 +241,7 @@ struct emit_sim {
     std::vector<size_t> batch_count_data;
 };
 
-void run_sim_by_steps(parallel_ssa &S,emit_sim &emitter,size_t n,size_t dn,bool verbose) {
+void run_sim_by_steps(ssa &S,emit_sim &emitter,size_t n,size_t dn,bool verbose) {
     size_t N=S.instances();
 
     #pragma omp parallel for
@@ -256,7 +259,7 @@ void run_sim_by_steps(parallel_ssa &S,emit_sim &emitter,size_t n,size_t dn,bool 
     }
 }
 
-void run_sim_by_time(parallel_ssa &S,emit_sim &emitter,double t_end,double dt,bool verbose) {
+void run_sim_by_time(ssa &S,emit_sim &emitter,double t_end,double dt,bool verbose) {
     size_t N=S.instances();
 
     #pragma omp parallel for
@@ -325,7 +328,7 @@ int main(int argc, char **argv) {
 
         // set up simulator
             
-        parallel_ssa S(A.n_instances,M,0);
+        ssa S(A.n_instances,M,0);
 
         // emit initial state
 

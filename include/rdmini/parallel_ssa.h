@@ -8,22 +8,20 @@
 #include <type_traits>
 #include <vector>
 
-#include "rdmini/iterspan.h"
 #include "rdmini/rdmodel.h"
 #include "rdmini/exceptions.h"
 #include "rdmini/ssa_direct.h"
 
 #include "rdmini/ssa_pp_procsys.h"
 
-// TODO: split into .h and .cc if we've got fixed template parameters.
-
+template <unsigned MaxOrder>
 struct parallel_ssa {
 private:
-    typedef ssa_pp_procsys<3> proc_system;
-    typedef proc_system::key_type proc_index_type;
+    typedef ssa_pp_procsys<MaxOrder> proc_system;
+    typedef typename proc_system::key_type proc_index_type;
 
     typedef ssa_direct<proc_index_type,double> ssa_selector;
-    typedef ssa_selector::event_type event_type;
+    typedef typename ssa_selector::event_type event_type;
 
     struct ksel_updater_f {
         ksel_updater_f(proc_system &sys_,ssa_selector &sel_,size_t instance_):
@@ -41,7 +39,7 @@ private:
 
 
 public:
-    typedef proc_system::count_type count_type;
+    typedef typename proc_system::count_type count_type;
     static constexpr unsigned int max_process_order=proc_system::max_process_order;
     static constexpr unsigned int max_participants=proc_system::max_participants;
     static constexpr unsigned int dynamic_range=32; // TODO: replace with correct value ...
@@ -142,7 +140,7 @@ public:
         return ksys.count(species_to_pop_id(species_id,cell_id)); 
     }
 
-    std::result_of<decltype(&proc_system::counts)(proc_system,size_t)>::type counts(size_t instance) const {
+    typename std::result_of<decltype(&proc_system::counts)(proc_system,size_t)>::type counts(size_t instance) const {
         return ksys.counts(instance);
     }
 

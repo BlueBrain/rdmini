@@ -1,13 +1,15 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
-//#include <assert.h>
 #include <limits>
 
+// public headers
 #include "rdmini/rdmodel.h"
-#include "rdmini/yamlview.h"
-#include "rdmini/point.h"
-#include "rdmini/range_seq.h"
+
+// internal headers
+#include "point.h"
+#include "range_seq.h"
+#include "yamlview.h"
 
 using namespace rdmini;
 
