@@ -61,9 +61,9 @@ make</code></pre>
 <p>The <code>gh-pages</code> make target builds the documentation and then uses the included <code>commit-dir</code> script to commit the compiled documentation tree into a local <code>gh-pages</code> branch. The script constructs the commit as a merge commit between the previous state of the <code>gh-pages</code> branch, and the latest commit on the current branch.</p>
 <p>Updating the online documentation to match the latest commit on master then consists of:</p>
 <ol style="list-style-type: decimal">
-<li><p>Clone the main <code>bluebrain/rdmini</code> repository (or ensure that the local master and gh-pages branches point to the same commits as with those of the main repository).</p></li>
+<li><p>Ensure that the local repository master and gh-pages branches match those of <code>bluebrain/rdmini</code>.</p></li>
 <li><p>Build and update the gh-pages branch locally with <code>make gh-pages</code>.</p></li>
-<li><p>Push the update gh-pages branch back to <code>bluebrain/rdmini</code>.</p></li>
+<li><p>Either push the updated gh-pages branch back to <code>bluebrain/rdmini</code>, or push the branch to one’s GitHub repository and submit a pull request.</p></li>
 </ol>
 <h2 id="cleanup">Cleanup</h2>
 <p>Intermediate object files and temporary files will be removed with <code>make clean</code>.</p>
