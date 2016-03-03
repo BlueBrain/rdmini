@@ -81,7 +81,29 @@ is probably best performed using Haskell
 
 ## Publishing the documentation
 
-TODO: Discuss gh-pages target.
+The [online documentation](https://bluebrain.github.io/rdmini/)
+consists of the contents of the `gh-pages` branch of the
+[BlueBrain repository](https://github.com/bluebrain/rdmini/).
+
+The `gh-pages` make target builds the documentation and then
+uses the included `commit-dir` script to commit the compiled
+documentation tree into a local `gh-pages` branch. The script
+constructs the commit as a merge commit between the previous
+state of the `gh-pages` branch, and the latest commit on
+the current branch.
+
+Updating the online documentation to match the latest
+commit on master then consists of:
+
+1. Clone the main `bluebrain/rdmini` repository (or
+ensure that the local master and gh-pages branches
+point to the same commits as with those of the main repository).
+
+2. Build and update the gh-pages branch locally with
+`make gh-pages`.
+
+3. Push the update gh-pages branch back to `bluebrain/rdmini`.
+
 
 ## Cleanup
 
