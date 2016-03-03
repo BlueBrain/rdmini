@@ -6,16 +6,11 @@
 #include <set>
 #include <stdexcept>
 
+#include "rdmini/exceptions.h"
 #include "rdmini/util/named_collection.h"
 #include "rdmini/util/check_valid.h"
 
-struct model_io_error: std::runtime_error {
-    model_io_error(const std::string &what_arg): std::runtime_error(what_arg) {}
-};
-
-struct model_invalid_error: std::runtime_error {
-    model_invalid_error(const std::string &what_arg): std::runtime_error(what_arg) {}
-};
+namespace rdmini {
 
 struct species_info: rdmini::check_valid_api<species_info> { 
     std::string name;
@@ -91,6 +86,8 @@ struct rd_model {
 
 rd_model rd_model_read(std::istream &,const std::string &model_name="");
 rd_model rd_model_read(const std::string &,const std::string &model_name="");
+
+} // namespace rdmini
 
 #endif // ndef RDMODEL_H_
 

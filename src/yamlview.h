@@ -13,6 +13,8 @@ extern "C" {
 #include <yaml.h>
 }
 
+namespace rdmini {
+
 struct yaml_error: std::runtime_error {
     yaml_error(const std::string &what_str,const std::string &where_str_=""):
         std::runtime_error(what_str),where_str(where_str_) {}
@@ -143,8 +145,6 @@ private:
     std_tag_enum tag_std;
 };
 
-yaml_node_t yaml_node_view::null_node = {YAML_NO_NODE, (yaml_char_t *)YAML_NULL_TAG}; 
-
 struct yaml_document {
     struct yaml_document_deleter {
         void operator()(yaml_document_t *p) {
@@ -175,13 +175,7 @@ struct yaml_document {
 
 };
 
-inline int yaml_istream_reader(void *data,unsigned char *buffer,size_t size,size_t *size_read) {
-    std::istream &I=*static_cast<std::istream *>(data);
-
-    I.read(reinterpret_cast<char *>(buffer),size);
-    *size_read=I.gcount();
-    return !I.bad();
-}
+int yaml_istream_reader(void *data,unsigned char *buffer,size_t size,size_t *size_read);
 
 struct yaml_parser {
     struct yaml_parser_deleter {
@@ -211,12 +205,6 @@ struct yaml_parser {
     yaml_document next_document() { return yaml_document(*this); }
 };
 
-yaml_document::yaml_document(yaml_parser &p): doc(new yaml_document_t,yaml_document_deleter()) {
-    if (!yaml_parser_load(p.P.get(),doc.get())) {
-        // create empty document
-        yaml_document_initialize(doc.get(),nullptr,nullptr,nullptr,1,1);
-    }
-}
+} // namespace rdmini
 
 #endif // ndef YAMLVIEW_H_
-

@@ -11,7 +11,7 @@
 #include "range_seq.h"
 #include "yamlview.h"
 
-using namespace rdmini;
+namespace rdmini {
 
 static std::ostream &emit_reaction_expr(std::ostream &O,const rd_model &M,const std::multiset<int> &x) {
     bool first=true;
@@ -97,7 +97,7 @@ static void parse_species(rd_model &M,const yaml_node_view &S) {
         throw model_io_error("parsing species failure: "+error.where());
     }
     catch (validation_failure &error) {
-        throw model_invalid_error(error.what());
+        throw invalid_model(error.what());
     }
 }
 
@@ -153,7 +153,7 @@ static void parse_reaction(rd_model &M,const yaml_node_view &R) {
         throw model_io_error("parsing reaction failure: "+error.where());
     }
     catch (validation_failure &error) {
-        throw model_invalid_error(error.what());
+        throw invalid_model(error.what());
     }
 }
 
@@ -186,7 +186,7 @@ static void parse_cells_wmvol(rd_model &M,const yaml_node_view &e) {
         throw model_io_error("parsing cells wmvol failure: "+e.where());
     }
     catch (validation_failure &error) {
-        throw model_invalid_error(error.what());
+        throw invalid_model(error.what());
     }
 }
 
@@ -297,3 +297,4 @@ rd_model rd_model_read_yaml(yaml_parser Y,const std::string &model_name) {
     return M;
 }
 
+} // namespace rdmini

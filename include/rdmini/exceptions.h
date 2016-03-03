@@ -27,6 +27,20 @@ struct ssa_error: std::runtime_error {
     ssa_error(const char *m): std::runtime_error(m) {}
 };
 
+/** Thrown when an error occurs in parsing a model specification */
+
+struct model_io_error: std::runtime_error {
+    model_io_error(const std::string &what_arg): std::runtime_error(what_arg) {}
+    model_io_error(const char *m): std::runtime_error(m) {}
+};
+
+/** Thrown when a parsed rdmodel fails a validity check */
+
+struct invalid_model: std::runtime_error {
+    invalid_model(const std::string &what_arg): std::runtime_error(what_arg) {}
+    invalid_model(const char *m): std::runtime_error(m) {}
+};
+
 } // namespace rdmini
 
 #endif // ndef RDMINI_EXCEPTIONS_H_

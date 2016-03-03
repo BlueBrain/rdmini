@@ -22,6 +22,8 @@
  * factored through populations, and computes propensities
  * on demand from cached factors. */
 
+namespace rdmini {
+
 template <unsigned MaxOrder=3>
 struct ssa_pp_procsys {
     typedef uint32_t key_type;
@@ -273,5 +275,6 @@ public:
     }
 };
 
+} // namespace rdmini
 
 #endif // ndef  SSA_PP_PROCSYS_H_

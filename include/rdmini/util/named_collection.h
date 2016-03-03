@@ -7,6 +7,8 @@
 #include <string>
 #include <stdexcept>
 
+namespace rdmini {
+
 /* Represent a collection of objects with unique keys
  * given by their 'name' field, of type std::string.
  *
@@ -85,5 +87,7 @@ struct named_collection {
     std::vector<T> items;
     std::unordered_map<key_type,size_type> keymap;
 };
+
+} // namespace rdmini
 
 #endif // ndef NAMED_COLLECTION_H_
