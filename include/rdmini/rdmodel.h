@@ -6,8 +6,8 @@
 #include <set>
 #include <stdexcept>
 
-#include "rdmini/named_collection.h"
-#include "rdmini/check_valid.h"
+#include "rdmini/util/named_collection.h"
+#include "rdmini/util/check_valid.h"
 
 struct model_io_error: std::runtime_error {
     model_io_error(const std::string &what_arg): std::runtime_error(what_arg) {}

@@ -27,7 +27,7 @@ testxmldir := test-xml
 
 # default target: everything but doc and test
 
-all: $(demos) $(tests) $(benches) 
+all: librdmini.a $(demos) $(tests) $(benches) 
 
 # source directories
 
@@ -70,7 +70,7 @@ CC = __error__
 CXX = __error__
 endif
 
-CPPFLAGS += -I$(top)
+CPPFLAGS += -I$(top)/include
 
 # need to make libyaml ourselves?
 
@@ -91,32 +91,34 @@ endif
 
 # rdmini core routines
 
-rdmini_sources := $(wildcard $(top)/rdmini/*.cc)
+rdmini_sources := $(wildcard $(top)/src/*.cc)
 rdmini_objects := $(patsubst %.cc,obj/%.o,$(notdir $(rdmini_sources)))
 
-obj/%.o: rdmini/%.cc
+obj/%.o: src/%.cc
 	$(CXX) -c -o $@ $(CPPFLAGS) $(CXXFLAGS) $<
 
+librdmini.a: $(rdmini_objects)
+	$(AR) $(ARFLAGS) $@ $^
 
-# demo apps link with rdmini object files
+# demo apps link against librdmini
 
 demo_sources := $(wildcard $(top)/demo/demo_*.cc)
 
-demo_%: obj/demo_%.o $(rdmini_objects) $(yaml_lib)
+demo_%: obj/demo_%.o librdmini.a $(yaml_lib)
 	$(CXX) -o $@ $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS)
 
 obj/demo_%.o: demo/demo_%.cc
 	$(CXX) -c -o $@ $(CPPFLAGS) $(CXXFLAGS) $<
 
 
-# tests link with rdmini object files and libgtestmain
+# tests link against librdmini and libgtestmain
 
 GTEST_CPPFLAGS=-isystem $(GTEST_DIR)/include
 
 test_sources := $(wildcard $(top)/test/test_*.cc)
 test_executables := $(patsubst %.cc,%,$(notdir $(test_sources)))
 
-test_%: obj/test_%.o $(rdmini_objects) $(yaml_lib) libgtestmain.a
+test_%: obj/test_%.o librdmini.a $(yaml_lib) libgtestmain.a
 	$(CXX) -o $@ $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS)
 
 obj/test_%.o: test/test_%.cc
@@ -184,7 +186,8 @@ clean:
 	rm -f gtest-all.o gtest_main.o obj/*.o obj/*.hi obj/yaml/*.o obj/*.d.bak style.csl
 
 realclean: clean
-	rm -f $(demos) $(tests) $(benches) $(hakyll_site) libgtestmain.a libyaml.a obj/*.d obj/yaml/*.d 
+	rm -f $(demos) $(tests) $(benches) $(hakyll_site) libgtestmain.a libyaml.a librdmini.a obj/*.d obj/yaml/*.d 
+	rm -rf test-xml
 	rm -rf $(docdir) _cache style.csl
 
 # run tests

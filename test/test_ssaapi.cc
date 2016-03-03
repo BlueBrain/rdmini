@@ -42,10 +42,6 @@ class ssa : public ::testing::Test
 };
 
 
-TEST_F(ssa,initialTest) {
-    ASSERT_TRUE(true);
-}
-
 TEST_F(ssa,initialSpecification) {
     /// This model is partially defined in the test header 
     ASSERT_TRUE(ssa_solver.size()==prop_size); 
