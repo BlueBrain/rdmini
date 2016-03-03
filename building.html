@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Building rdmini</title>
+        <link rel="stylesheet" type="text/css" href="./css/default.css" />
+    </head>
+    <body>
+        <div id="header">
+            <div id="navigation">
+                <a href="./"><tt>rdmini</tt> home</a>
+            </div>
+        </div>
+
+        <div id="content">
+            <h1>Building rdmini</h1>
+
+            <h2 id="code-organisation">Code organisation</h2>
+<p>The top-level directories in the <code>rdmini</code> project are organised as follows:</p>
+<dl>
+<dt><code>build/</code></dt>
+<dd>Out-of-source build directory, with Makefile.
+</dd>
+<dt><code>demo/</code></dt>
+<dd>Source for demonstration and informal test code.
+</dd>
+<dt><code>doc/</code></dt>
+<dd>Documentation source, primarily in Pandoc-flavoured Markdown.
+</dd>
+<dt><code>gtest-1.7.0/</code></dt>
+<dd>Google test sources.
+</dd>
+<dt><code>rdmini/</code></dt>
+<dd>Source and headers for <code>rdmini</code> core functionality.
+</dd>
+<dt><code>scripts/</code></dt>
+<dd>Miscellaneous scripts used in the build process or for parsing results.
+</dd>
+<dt><code>test/</code></dt>
+<dd>Source for unit tests.
+</dd>
+<dt><code>yaml-0.1.6/</code></dt>
+<dd>Subset of libyaml sources.
+</dd>
+</dl>
+<h2 id="building-the-executables">Building the executables</h2>
+<p>The standard procedure for building the demo and test executables is:</p>
+<pre><code>cd build;
+make</code></pre>
+<p>Tests can be run with <code>make test</code>, which will also write the test results in xUnit XML format to the subdirectory <code>test-xml</code>.</p>
+<p>The <code>rdmini</code> source is written in C++11, and thus requires a C++11 capable compiler. Everything should build ‘out of the box’ with gcc version 5 or later.</p>
+<p>The C and C++ compilers used in the Makefile are the default from the environment, and can be specified via the <code>CC</code> and <code>CXX</code> environment variables, or overriden on the <code>make</code> command-line. The corresponding compiler options though are not automatically deduced, and must be specified explicitly by setting the variable <code>COMPILER</code> in the Makefile directly, or via the <code>make</code> command-line. Options are included in the Makefile for the cases when <code>COMPILER</code> is <code>gnu</code>, <code>clang</code>, <code>pgi</code> or <code>cray</code>.</p>
+<p>Inter-source dependencies are determined automatically with <code>gcc</code> and <code>clang</code>, but for <code>pgi</code> and <code>cray</code> these must be built explicitly with <code>make depend</code>.</p>
+<h2 id="building-the-documentation">Building the documentation</h2>
+<p>The documentation tree is built with <code>make doc</code>, which will compile the markdown documentation into an HTML hierarchy under <code>www/</code> in the build directory.</p>
+<p>This build process uses <a href="https://jaspervdj.be/hakyll/">Hakyll</a> and <a href="http://pandoc.org">Pandoc</a>. Hakyll is a Haskell-based library for the compilation and deployment of HTML sites; building the documentation requires first the compilation of the site builder program in <code>doc/src/site.hs</code>, and then running it to produce the final HTML.</p>
+<p>Building the documentaion thus requires a Haskell compiler and the Hakyll package and its dependencies. The current <code>site.hs</code> has been verified to build with <a href="https://www.haskell.org/ghc/">GHC</a> 7.6.3 and Hakyll version 4.7.5.1. Installation of Hakyll is probably best performed using Haskell <a href="https://www.haskell.org/cabal/">Cabal</a>.</p>
+<h2 id="publishing-the-documentation">Publishing the documentation</h2>
+<p>The <a href="https://bluebrain.github.io/rdmini/">online documentation</a> consists of the contents of the <code>gh-pages</code> branch of the <a href="https://github.com/bluebrain/rdmini/">BlueBrain repository</a>.</p>
+<p>The <code>gh-pages</code> make target builds the documentation and then uses the included <code>commit-dir</code> script to commit the compiled documentation tree into a local <code>gh-pages</code> branch. The script constructs the commit as a merge commit between the previous state of the <code>gh-pages</code> branch, and the latest commit on the current branch.</p>
+<p>Updating the online documentation to match the latest commit on master then consists of:</p>
+<ol style="list-style-type: decimal">
+<li><p>Clone the main <code>bluebrain/rdmini</code> repository (or ensure that the local master and gh-pages branches point to the same commits as with those of the main repository).</p></li>
+<li><p>Build and update the gh-pages branch locally with <code>make gh-pages</code>.</p></li>
+<li><p>Push the update gh-pages branch back to <code>bluebrain/rdmini</code>.</p></li>
+</ol>
+<h2 id="cleanup">Cleanup</h2>
+<p>Intermediate object files and temporary files will be removed with <code>make clean</code>.</p>
+<p>All executables, libraries, dependency files and generated documentation will be removed with <code>make realclean</code>.</p>
+<div id="refs" class="references">
+
+</div>
+        </div>
+        <div id="footer">
+            Site generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+    </body>
+</html>
