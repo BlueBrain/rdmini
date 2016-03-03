@@ -104,7 +104,12 @@ public:
     }
 
     iterator erase(const_iterator pos) {
+/* work asround for defect in libstdc++ for gcc version < 5 */
+#if defined(__GNUC__) && __GNUC__ < 5
+        return v.erase(v.begin()+std::distance(cbegin(),pos));
+#else
         return v.erase(pos);
+#endif
     }
 
     size_type erase(const key_type &key) {
