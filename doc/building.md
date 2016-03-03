@@ -95,14 +95,15 @@ the current branch.
 Updating the online documentation to match the latest
 commit on master then consists of:
 
-1. Clone the main `bluebrain/rdmini` repository (or
-ensure that the local master and gh-pages branches
-point to the same commits as with those of the main repository).
+1. Ensure that the local repository master and gh-pages
+branches match those of `bluebrain/rdmini`.
 
 2. Build and update the gh-pages branch locally with
 `make gh-pages`.
 
-3. Push the update gh-pages branch back to `bluebrain/rdmini`.
+3. Either push the updated gh-pages branch back to `bluebrain/rdmini`,
+or push the branch to one's GitHub repository and submit
+a pull request.
 
 
 ## Cleanup
