@@ -33,7 +33,7 @@ std::string test_specification=
 
 TEST(yamlSpec,initialSpecification) {
     try {
-        rd_model M=rd_model_read(test_specification,"modelTest");
+        rdmini::rd_model M=rdmini::rd_model_read(test_specification,"modelTest");
 
         ASSERT_FALSE(M.species.empty());
         ASSERT_EQ(2,M.n_species());
@@ -45,16 +45,16 @@ TEST(yamlSpec,initialSpecification) {
         ASSERT_EQ(1,M.species.index("B"));
         ASSERT_TRUE(M.species.index("C")<0);
     }
-    catch (model_invalid_error &ex) {
-        FAIL() << "unexpected model_invalid_error: " << ex.what();
+    catch (rdmini::invalid_model &ex) {
+        FAIL() << "unexpected invalid_model: " << ex.what();
     }
-    catch (model_io_error &ex) {
+    catch (rdmini::model_io_error &ex) {
         FAIL() << "unexpected model_io_error: " << ex.what();
     }
 }
 
 TEST(yamlSpec, missingModelSpecification) {
-    ASSERT_THROW(rd_model_read(test_specification,"missingModel"),model_io_error);
+    ASSERT_THROW(rdmini::rd_model_read(test_specification,"missingModel"),rdmini::model_io_error);
 }
 
 TEST(yamlSpec,negativeConcentrations) {
@@ -77,7 +77,7 @@ TEST(yamlSpec,negativeConcentrations) {
         "...\n";
  
     // Adding new species with negative values: Should throw 
-    ASSERT_THROW(rd_model_read(negative_concentration_spec1,"modelTest1"),model_invalid_error);
+    ASSERT_THROW(rdmini::rd_model_read(negative_concentration_spec1,"modelTest1"),rdmini::invalid_model);
 
     std::string negative_concentration_spec2=
         "---\n"
@@ -97,7 +97,7 @@ TEST(yamlSpec,negativeConcentrations) {
         "    rate: 4e-5\n"
         "...\n";
 
-    ASSERT_THROW(rd_model_read(negative_concentration_spec2,"modelTest2"),model_invalid_error);
+    ASSERT_THROW(rdmini::rd_model_read(negative_concentration_spec2,"modelTest2"),rdmini::invalid_model);
 }
 
 TEST(yamlSpec,negativeRate) {
@@ -119,7 +119,7 @@ TEST(yamlSpec,negativeRate) {
         "    rate: -4e-5\n"
         "...\n";
 
-    ASSERT_THROW(rd_model_read(negative_reaction_rate_spec,"modelTest3"),model_invalid_error);
+    ASSERT_THROW(rdmini::rd_model_read(negative_reaction_rate_spec,"modelTest3"),rdmini::invalid_model);
 }
 
 TEST(yamlSpec,zeroVolume) {
@@ -137,7 +137,7 @@ TEST(yamlSpec,zeroVolume) {
         "    rate: 4e-5\n"
         "...\n";
 
-    ASSERT_THROW(rd_model_read(zero_volume_spec,"modelTest4"),model_invalid_error);
+    ASSERT_THROW(rdmini::rd_model_read(zero_volume_spec,"modelTest4"),rdmini::invalid_model);
 }
 
 TEST(yamlSpec,negativeVolume) {
@@ -155,6 +155,6 @@ TEST(yamlSpec,negativeVolume) {
         "    rate: 4e-5\n"
         "...\n";
 
-    ASSERT_THROW(rd_model_read(negative_volume_spec,"modelTest5"),model_invalid_error);
+    ASSERT_THROW(rdmini::rd_model_read(negative_volume_spec,"modelTest5"),rdmini::invalid_model);
 }
 

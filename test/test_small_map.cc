@@ -35,7 +35,7 @@ struct int_nontrivial {
 };
 
 
-using map_types=::testing::Types<small_map<int,int>,small_map<int_nontrivial,int_nontrivial>>;
+using map_types=::testing::Types<rdmini::small_map<int,int>,rdmini::small_map<int_nontrivial,int_nontrivial>>;
 TYPED_TEST_CASE(smallmap,map_types);
 
 
@@ -271,7 +271,7 @@ struct eq_mod_k {
     int k;
 };
 
-using map_nonstd_eq_types=::testing::Types<small_map<int,int,eq_mod_k>,small_map<int_nontrivial,int_nontrivial,eq_mod_k>>;
+using map_nonstd_eq_types=::testing::Types<rdmini::small_map<int,int,eq_mod_k>,rdmini::small_map<int_nontrivial,int_nontrivial,eq_mod_k>>;
 TYPED_TEST_CASE(smallmap_nonstd_eq,map_nonstd_eq_types);
 
 TYPED_TEST(smallmap_nonstd_eq,count) {

@@ -7,6 +7,8 @@
 
 /** Implementation of 'direct' SSA method. */
 
+namespace rdmini {
+
 // KeyType must be unsigned integral
 // ValueType must be floating point
 
@@ -72,5 +74,7 @@ private:
     std::vector<value_type> propensities;
     value_type total;
 };
+
+} // namespace rdmini
 
 #endif // ndef SSA_DIRECT_H_

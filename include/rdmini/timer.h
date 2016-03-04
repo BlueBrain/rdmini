@@ -7,6 +7,7 @@
 
 #include <chrono>
 
+namespace rdmini {
 namespace timer {
 
 inline void fence() {
@@ -109,7 +110,7 @@ struct timer_guard {
 template <typename Timer>
 inline timer_guard<Timer> guard(Timer &T) { return timer_guard<Timer>(T); }
 
-}
+}} // namespace rdmini::timer
 
 
 #endif // ndef TIMER_H_

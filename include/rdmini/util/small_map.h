@@ -3,6 +3,8 @@
 
 /** Vector-backed small map */
 
+namespace rdmini {
+
 template <typename Key,typename Value,class KeyEqual=std::equal_to<Key>,class Allocator=std::allocator<std::pair<Key,Value>>>
 struct small_map {
     typedef Key key_type;
@@ -194,5 +196,7 @@ private:
         return b;
     }
 };
+
+} // namespace rdmini;
 
 #endif // SMALL_MAP_H

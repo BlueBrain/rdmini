@@ -13,7 +13,8 @@
 const char *demo_sim_version="0.0.2";
 
 // fix maximum order of reactions here:
-using ssa=parallel_ssa<3>;
+using ssa=rdmini::parallel_ssa<3>;
+namespace timer=rdmini::timer;
 
 // throw to clean-up and exit
 struct fatal_error: std::exception {
@@ -160,7 +161,7 @@ cl_args parse_cl_args(int argc,char **argv) {
 
 // TODO: consider ni independent data structures for thread friendliness.
 struct emit_sim {
-    explicit emit_sim(const rd_model &M, size_t ni, bool batch_=false, size_t expected_samples=0): n_species(M.n_species()), n_cells(M.n_cells()), n_instances(ni), batch(batch_) {
+    explicit emit_sim(const rdmini::rd_model &M, size_t ni, bool batch_=false, size_t expected_samples=0): n_species(M.n_species()), n_cells(M.n_cells()), n_instances(ni), batch(batch_) {
         // prepare csv-style header
         std::stringstream s;
         s << "instance,time,cell";
@@ -292,21 +293,21 @@ int main(int argc, char **argv) {
 
         if (A.version) {
             std::cout << basename << " version " << demo_sim_version << "\n";
-            std::cout << "rdmini library version " << rdmini_version << "\n";
+            std::cout << "rdmini library version " << rdmini::rdmini_version << "\n";
             return 0;
         }
 
         // read in model specification
 
-        rd_model M;
+        rdmini::rd_model M;
 
         if (A.model_file.empty() || A.model_file=="-")
-            M=rd_model_read(std::cin,A.model_name);
+            M=rdmini::rd_model_read(std::cin,A.model_name);
         else {
             std::ifstream file(A.model_file);
             if (!file) throw fatal_error("unable to open file for reading");
 
-            M=rd_model_read(file,A.model_name);
+            M=rdmini::rd_model_read(file,A.model_name);
         }
 
         // set up data emitter and timer

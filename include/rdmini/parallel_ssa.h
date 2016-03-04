@@ -1,5 +1,5 @@
-#ifndef SERIAL_SSA_H_
-#define SERIAL_SSA_H_
+#ifndef PARALLEL_SSA_H_
+#define PARALLEL_SSA_H_
 
 #include <cstdint>
 #include <limits>
@@ -11,8 +11,9 @@
 #include "rdmini/rdmodel.h"
 #include "rdmini/exceptions.h"
 #include "rdmini/ssa_direct.h"
-
 #include "rdmini/ssa_pp_procsys.h"
+
+namespace rdmini {
 
 template <unsigned MaxOrder>
 struct parallel_ssa {
@@ -223,5 +224,5 @@ private:
     std::vector<instance_state> states;
 };
 
-
-#endif // ndef  SERIAL_SSA_H_
+} // namespace rdmini
+#endif // ndef PARALLEL_SSA_H_
