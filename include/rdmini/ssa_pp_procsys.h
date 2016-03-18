@@ -14,14 +14,15 @@
 #include <utility>
 #include <vector>
 
-#include "rdmini/iterspan.h"
 #include "rdmini/rdmodel.h"
-#include "rdmini/small_map.h"
 #include "rdmini/exceptions.h"
+#include "rdmini/util/small_map.h"
 
 /** SSA process system that maintains process dependencies
  * factored through populations, and computes propensities
  * on demand from cached factors. */
+
+namespace rdmini {
 
 template <unsigned MaxOrder=3>
 struct ssa_pp_procsys {
@@ -274,5 +275,6 @@ public:
     }
 };
 
+} // namespace rdmini
 
 #endif // ndef  SSA_PP_PROCSYS_H_

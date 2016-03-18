@@ -1,8 +1,15 @@
+#ifndef RANGE_SEQ_H_
+#define RANGE_SEQ_H_
+
 #include <initializer_list>
 #include <utility>
 #include <iostream>
 #include <vector>
 #include <algorithm>
+
+namespace rdmini {
+
+/** Represent a sequence as a sequence of closed ranges. */
 
 template <typename T>
 struct range_seq {
@@ -47,3 +54,7 @@ struct range_seq {
         return O;
     }
 };
+
+} // namespace rdmini
+
+#endif // ndef RANGE_SEQ_H_

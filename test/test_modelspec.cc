@@ -30,9 +30,9 @@ class modelspec : public ::testing::Test
         schnakenbergModl.reactions.clear();
     }
 
-    rd_model schnakenbergModl;
-    species_info specyA, specyB;
-    reaction_info reactionA;
+    rdmini::rd_model schnakenbergModl;
+    rdmini::species_info specyA, specyB;
+    rdmini::reaction_info reactionA;
 };
 
 
@@ -52,7 +52,7 @@ TEST_F(modelspec,initialSpecification) {
 TEST_F(modelspec,addSpecies) {
     /// Completing model specification
     // Adding specy which does not exist
-    species_info speciesC={"C",0.05,15.0}; 
+    rdmini::species_info speciesC={"C",0.05,15.0}; 
     // Verifying specy specification 
     ASSERT_STREQ("C",speciesC.name.c_str());
     ASSERT_DOUBLE_EQ(0.05,speciesC.diffusivity);
@@ -67,9 +67,9 @@ TEST_F(modelspec,addSpecies) {
     ASSERT_DOUBLE_EQ(0.05,schnakenbergModl.species[index].diffusivity);
     ASSERT_DOUBLE_EQ(15.0,schnakenbergModl.species[index].concentration); 
 
-    species_info speciesD={"D",-0.05,15.0};
+    rdmini::species_info speciesD={"D",-0.05,15.0};
     ASSERT_FALSE(speciesD.is_valid());
-    species_info speciesE={"E",0.05,-15.0};
+    rdmini::species_info speciesE={"E",0.05,-15.0};
     ASSERT_FALSE(speciesE.is_valid());
 
     ASSERT_THROW(speciesD.check_valid(),rdmini::validation_failure);
@@ -79,7 +79,7 @@ TEST_F(modelspec,addReaction) {
     /// Adding regular reaction
     std::multiset<int> left = {1,1,2};
     std::multiset<int> right = {1,1,5,-5};
-    reaction_info reactionB={"reactionB",left,right,10};   
+    rdmini::reaction_info reactionB={"reactionB",left,right,10};   
     schnakenbergModl.reactions.insert(reactionB);
 
     ASSERT_TRUE(schnakenbergModl.n_reactions()==2);
@@ -103,7 +103,7 @@ TEST_F(modelspec,addReaction) {
     ASSERT_NO_THROW(model_reactionB.check_valid());
 
     /// Add improper reaction
-    reaction_info reactionC={"reactionC",left,right,-10};   
+    rdmini::reaction_info reactionC={"reactionC",left,right,-10};   
     schnakenbergModl.reactions.insert(reactionC);
 
     ASSERT_THROW(schnakenbergModl.reactions["reactionC"].check_valid(),rdmini::validation_failure);

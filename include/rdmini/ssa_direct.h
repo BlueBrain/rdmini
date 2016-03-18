@@ -7,6 +7,8 @@
 
 /** Implementation of 'direct' SSA method. */
 
+namespace rdmini {
+
 // KeyType              must be unsigned integral
 // ValueType            must be floating point
 // RealDistribution     must be a real distribution over an interval [a,b]
@@ -84,5 +86,7 @@ public:
     value_type total_propensity() const { return total; };
 
 };
+
+} // namespace rdmini
 
 #endif // ndef SSA_DIRECT_H_

@@ -2,7 +2,7 @@
 #include <utility>
 #include <gtest/gtest.h>
 
-#include "rdmini/check_valid.h"
+#include "rdmini/util/check_valid.h"
 
 struct dummy_class: rdmini::check_valid_api<dummy_class> {
     void bad_method() { valid_flag=false; }

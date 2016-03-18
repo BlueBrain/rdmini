@@ -3,6 +3,8 @@
 
 /** Vector-backed small map */
 
+namespace rdmini {
+
 template <typename Key,typename Value,class KeyEqual=std::equal_to<Key>,class Allocator=std::allocator<std::pair<Key,Value>>>
 struct small_map {
     typedef Key key_type;
@@ -104,7 +106,12 @@ public:
     }
 
     iterator erase(const_iterator pos) {
+/* work asround for defect in libstdc++ for gcc version < 5 */
+#if defined(__GNUC__) && __GNUC__ < 5
+        return v.erase(v.begin()+std::distance(cbegin(),pos));
+#else
         return v.erase(pos);
+#endif
     }
 
     size_type erase(const key_type &key) {
@@ -189,5 +196,7 @@ private:
         return b;
     }
 };
+
+} // namespace rdmini;
 
 #endif // SMALL_MAP_H

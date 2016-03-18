@@ -92,7 +92,7 @@ void run_demo_static(std::ostream &O,const cl_args &A) {
 
     O << "\n";
 
-    typedef ssa_direct<size_t,double> S;
+    typedef rdmini::ssa_direct<size_t,double> S;
     S ssa(prop.size());
     for (size_t i=0; i<prop.size(); ++i)
         ssa.update(i,prop[i]);

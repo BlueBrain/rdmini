@@ -96,6 +96,7 @@ main = do
 -- customize Pandoc compiler process:
 
 -- 1. transform internal links to their corresponding target
+
 regexUTF8 = RE.makeRegexOpts (RE.defaultCompOpt .|. RE.compUTF8) RE.defaultExecOpt
 
 transformInternal :: Pandoc -> Compiler Pandoc
@@ -117,6 +118,7 @@ transformCites :: Pandoc -> Compiler Pandoc
 transformCites = unsafeCompiler . processCites'
 
 -- 3. bypass Pandoc table column wrap sizes
+
 pandocReaderOptions = defaultHakyllReaderOptions { readerColumns = 200 }
 pandocWriterOptions = defaultHakyllWriterOptions { writerWrapText = WrapAuto }
 

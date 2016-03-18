@@ -76,15 +76,15 @@ int main(int argc, char **argv) {
     try {
         cl_args A=parse_cl_args(argc,argv);
 
-        rd_model M;
+        rdmini::rd_model M;
 
         if (A.model_file.empty() || A.model_file=="-")
-            M=rd_model_read(std::cin,A.model_name);
+            M=rdmini::rd_model_read(std::cin,A.model_name);
         else {
             std::ifstream file(A.model_file);
             if (!file) throw fatal_error("unable to open file for reading");
 
-            M=rd_model_read(file,A.model_name);
+            M=rdmini::rd_model_read(file,A.model_name);
         }
 
         std::cout << M << "\n";

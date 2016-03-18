@@ -4,6 +4,8 @@
 #include <cmath>
 #include <array>
 
+namespace rdmini {
+
 struct point3d: public std::array<double,3> {
     point3d() = default;
 
@@ -201,5 +203,7 @@ private:
         return a[0]<=b[0] && a[1]<=b[1] && a[2]<=b[2];
     }
 };
+
+} // namespace rdmini
 
 #endif // POINT_H_
