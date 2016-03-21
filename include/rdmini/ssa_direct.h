@@ -15,16 +15,16 @@ namespace rdmini {
 
 template <typename KeyType,
          typename ValueType, 
-         typename RealDistribution=std::uniform_real_distribution<ValueType> >
+         typename UnifRealDistribution=std::uniform_real_distribution<ValueType> >
 struct ssa_direct {
     typedef KeyType key_type;
     typedef ValueType value_type;
     typedef value_type& reference;
-    typedef RealDistribution real_distribution;    
+    typedef UnifRealDistribution unif_real_distribution;    
 
 private:
     size_t n_key;
-    real_distribution U;
+    unif_real_distribution U;
     std::exponential_distribution<value_type> E;
     std::vector<value_type> propensities;
     value_type total;
