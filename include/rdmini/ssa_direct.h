@@ -14,17 +14,15 @@ namespace rdmini {
 // RealDistribution     must be a real distribution over an interval [a,b]
 
 template <typename KeyType,
-         typename ValueType, 
-         typename UnifRealDistribution=std::uniform_real_distribution<ValueType> >
+         typename ValueType> 
 struct ssa_direct {
     typedef KeyType key_type;
     typedef ValueType value_type;
     typedef value_type& reference;
-    typedef UnifRealDistribution unif_real_distribution;    
 
 private:
     size_t n_key;
-    unif_real_distribution U;
+    std::uniform_real_distribution<value_type> U;
     std::exponential_distribution<value_type> E;
     std::vector<value_type> propensities;
     value_type total;
@@ -50,20 +48,24 @@ public:
     // Getter for number of keys
     size_t size() const { return n_key; }
 
+    // Computes inverse CDF
+    key_type inverse_cdf(value_type u) const {
+        value_type x = u*total;    
+        key_type i=0;
+        for (i=0; i<n_key; ++i) {
+            x-=propensities[i];
+            if (x<0) break;
+        }
+        if (i>=n_key) throw rdmini::ssa_error("fell off propensity ladder (rounding?)");
+        return i;
+    }
+
     // Computes next event: which one (idx) and when (dt) 
     template <typename R>
-        event_type next(R &g) {
-            value_type x=total*U(g);
-            key_type i=0;
-            for (i=0; i<n_key; ++i) {
-                x-=propensities[i];
-                if (x<0) break;
-            }
-            if (i>=n_key) throw rdmini::ssa_error("fell off propensity ladder (rounding?)");
-
-            value_type dt=E(g)/total;
-            return event_type{i,dt};
-        }
+    event_type next(R &g) {
+        return event_type{inverse_cdf(U(g)), E(g)/total};
+    }
+        
 
     // Setter for number of keys
     void reset(size_t n_key_) {
