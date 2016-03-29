@@ -15,7 +15,7 @@ COMPILER := gnu
 
 # main targets
 
-demos := demo_parse demo_ssa_direct demo_sim demo_timer_test
+demos := demo_parse demo_ssa_direct demo_sim demo_timer_test demo_distribute
 tests := test_small_map test_modelspec test_modelspec_yaml test_ssaapi test_check_valid
 benches := 
 hakyll_site := ./site

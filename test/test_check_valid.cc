@@ -157,12 +157,12 @@ TEST(check_valid,check_valid_guard_ref) {
 }
 
 struct zero_n_safer: zero_n {
-    int set_n(int value) {
+    void set_n(int value) {
         auto _(check_valid_guard(this));
         n=value;
     }
 
-    int set_n_assert(int value) {
+    void set_n_assert(int value) {
         auto _(assert_valid_guard(this));
         n=value;
     }
