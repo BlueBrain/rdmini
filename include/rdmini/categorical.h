@@ -74,7 +74,7 @@ struct categorical_distribution {
                 while (i_small<n) q(i_small++)=1;
             }
 
-            while (i_big<n) q(i_big++)=1;
+            for (; i_big<n; ++i_big) if (q(i_big)>1) q(i_big)=1;
         }
 
         bool operator==(const param_type &P) const { return tbl==P.tbl; }
@@ -118,6 +118,29 @@ struct categorical_distribution {
         const real_type &q(value_type i) const { return tbl[i].first; }
         const value_type &alias(value_type i) const { return tbl[i].second; }
         value_type size() const { return static_cast<value_type>(tbl.size()); }
+
+        // just for debugging:
+        void dump(std::string header="table:") const {
+            using namespace std;
+            scoped_ios_format save(cerr);
+
+            if (!header.empty()) cerr << header << "\n";
+            cerr << "i\tq\ta\tp\n";
+            cerr << setprecision(5);
+
+            size_t n=tbl.size();
+            std::vector<real_type> p(n,0.0);
+            for (size_t i=0; i<n; ++i) {
+                p[i]+=tbl[i].first;
+                p[tbl[i].second]+=1-tbl[i].first;
+            }
+
+            size_t i=0;
+            for (auto t: tbl) {
+                cerr << i << '\t' << t.first << '\t' << t.second << '\t' << p[i] << '\n';
+                ++i;
+            }
+        }
 
     private:
         // tbl[i].first = probability bin i should give i instead of alias
