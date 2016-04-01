@@ -25,7 +25,7 @@ class Linear_RNG {
 
 //-----------------------------------------------------------------------------
 template <class RealType = double > 
-class vc_uniform_real_distribution {
+class vdc_uniform_real_distribution {
     public:
         typedef RealType result_type;
 
@@ -41,10 +41,10 @@ class vc_uniform_real_distribution {
         };
 
         // Constructor (1)
-        explicit vc_uniform_real_distribution(RealType a=0, RealType b=1) : _M_param(a,b) {}
+        explicit vdc_uniform_real_distribution(RealType a=0, RealType b=1) : _M_param(a,b) {}
         
         // Constructor (2)
-        explicit vc_uniform_real_distribution(const param_type& p) : _M_param(p) {}
+        explicit vdc_uniform_real_distribution(const param_type& p) : _M_param(p) {}
 
         // Reset the distribution rate (nothing to be done)
         void reset() {}
