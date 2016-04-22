@@ -195,6 +195,67 @@ struct multinomial_draw_sampler {
     }
 };
 
+/** Adjusted Pareto sampler
+ *
+ * Sample n items without replacement using an order method
+ * with ranking variables Q_i = U_i/(1-U_i)·(1-p_i)/p_i·a_i
+ * where the p_i are the desired inclusion probabilities and
+ * a_i is an adjustment factor:
+ *     a_i = exp(p_i(1-p_i)(p_i-1/2)/d^2)
+ *     d = sum p_i(1-p_i)
+ *
+ * The actual inclusion probabilities of this sampling method
+ * are only approximated by p_i, but approach asymptotically
+ * as d approaches infinity.
+ *
+ * The supplied inclusion probabilities should sum to n.
+ */
+
+struct adjusted_pareto_sampler {
+    using size_type=std::size_t;
+    using real_type=double;
+
+    adjusted_pareto_sampler() {}
+
+    template <typename Iter>
+    adjusted_pareto_sampler(size_type n_,Iter b,Iter e): P(n_,b,e) {}
+
+    struct param_type {
+        size_type n=0;
+        std::vector<real_type> qcoef;
+
+        param_type() {}
+
+        template <typename Iter>
+        param_type(size_type n_,Iter pi_begin,Iter pi_end): n(n_), qcoef(pi_begin,pi_end) {}
+    } P;
+ 
+    void param(const param_type &P_) { P=P_; }
+    param_type param() const { return P; }
+
+    void reset() {} // nop
+
+    size_type min() const { return P.n; }
+    size_type max() const { return P.n; }
+    size_type size() const { return P.qcoef.size(); }
+
+    template <typename FwdIter,typename OutIter,typename Rng>
+    size_type sample(FwdIter b,FwdIter e,OutIter o,Rng &g) {
+        // draw n items from categorical distribution
+        if (n==0) return 0;
+
+        if (std::distance(b,e)<size()) throw std::out_of_range("population range too small");
+
+        for (size_type i=0; i<n; ++i) {
+            FwdIter x=std::next(b,cat(g));
+            *o++=*x;
+        }
+        return n;
+    }
+};
+
+
+
 } // namespace rdmini
 
 #endif // ndef SAMPLE_H_
