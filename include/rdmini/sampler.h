@@ -51,7 +51,7 @@
  * exception; elements in the range that are beyond than the population
  * size are ignored.
  *
- *     size_type s.size9)  Minimum population size to draw from.
+ *     size_type s.size()  Minimum population size to draw from.
  */
 
 namespace rdmini {

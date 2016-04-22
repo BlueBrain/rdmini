@@ -65,8 +65,8 @@ In the following,
 expression | return type | description
 -----------|-------------|--------------------------------------
 `s.initialise(n,M,t0)` |  | set up simulator to simulate `n` instances of the given `rd_model` `M` with initial simulation time `t0`
-`s.count(s,c,j)` | `count_type` | population count of species index `s` in cell `c` in instance `j`
-`s.count(s,c)`   | `count_type` | equivalent to `s.count(s,c,0)`
+`s.count(s,c,j)` | `S::count_type` | population count of species index `s` in cell `c` in instance `j`
+`s.count(s,c)`   | `S::count_type` | equivalent to `s.count(s,c,0)`
 `s.counts(j)`    | implementaiton specific | return population counts of instance `j` as an iterable collection
 `s.set_count(s,c,k,j)` |  | set population count of species index `s` in cell `c` to `k` in instance `j`
 `s.set_count(s,c,k)`   |  | equivalent to `s.set_count(s,c,k,0)`
