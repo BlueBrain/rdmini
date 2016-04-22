@@ -36,6 +36,7 @@ const char *usage_text=
     "  -n N      Run N trials (default 1)\n"
     "  -C        Report raw counts, not normalised values\n"
     "  -S        Print just summary statistics\n\n"
+    "  -V        (With -S) Calculate and print correlations\n\n"
     "  -T        Print timing statistics\n\n"
     "The multinomial method assigns rounded-down values and then\n"
     "distributes the remainder multinomially.\n"
@@ -54,6 +55,7 @@ struct cl_args {
     bool summary=false; // print just summary statistics
     bool raw_counts=false; // don't scale by weight in report
     bool emit_timing=false;
+    bool covariances=false;
     double weight_ratio=1; // ratio in weights between successive bins
 
     method_enum method=STEPS;
@@ -114,6 +116,9 @@ cl_args parse_cl_args(int argc,char **argv) {
                 break;
             case 'S': // no argument
                 A.summary=true;
+                break;
+            case 'V': // no argument
+                A.covariances=true;
                 break;
             default:
                 throw usage_error("unrecognized option "+std::string(arg));
@@ -295,6 +300,7 @@ struct running_stats {
 
     double mean() const { return m; }
     double variance() const { return n<2?0:m2/(n-1); }
+    double cv()  const { return std::sqrt(variance())/mean(); }
     double min() const { return xmin; }
     double max() const { return xmax; }
 
@@ -322,6 +328,31 @@ struct running_stats {
     double xmin,xmax;
 };
 
+struct running_cov {
+    running_cov() { clear(); }
+
+    double covariance() { return n<1?0:cn/n; }
+
+    void clear() {
+        n=0;
+        mx=my=cn=0;
+    }
+
+    void insert(double x,double y) {
+        double dx=x-mx;
+        double dy=y-my;
+
+        ++n;
+        mx+=dx/n;
+        my+=dy/n;
+
+        cn+=(x-mx)*dy;
+    }
+
+    int n;
+    double mx,my,cn;
+};
+
 // harness
 
 void run_test(const cl_args &A) {
@@ -344,7 +375,13 @@ void run_test(const cl_args &A) {
     }
 
     std::vector<unsigned> bin(A.b,0);
-    std::vector<running_stats> stats(A.b);
+
+    std::vector<running_stats> stats;
+    std::vector<running_cov> cov;
+    if (A.summary) {
+        stats.resize(A.b);
+        if (A.covariances) cov.resize((A.b*(A.b-1))/2);
+    }
 
     std::uniform_int_distribution<int> U(A.c.first,A.c.second);
     rdmini::timer::hr_timer timer;
@@ -368,10 +405,18 @@ void run_test(const cl_args &A) {
         timer.stop();
 
         if (A.summary) {
+            size_t cov_index=0;
             for (size_t i=0; i<A.b; ++i) {
                 double x=bin[i];
                 if (!A.raw_counts && weight[i]!=0) x/=weight[i];
                 stats[i].insert(x);
+                if (A.covariances) {
+                    for (size_t j=0; j<i; ++j) {
+                        double y=bin[j];
+                        if (!A.raw_counts && weight[j]!=0) y/=weight[j];
+                        cov[cov_index++].insert(x,y);
+                    }
+                }
             }
         }
         else {
@@ -388,15 +433,34 @@ void run_test(const cl_args &A) {
     }
 
     if (A.summary) {
-        std::cout << "bin,mean,variance";
+        std::cout << "bin,mean,cv";
         if (A.raw_counts) std::cout << ",min,max";
+        if (A.covariances) std::cout << ",rmin,rmax";
         std::cout << "\n";
+
+        std::vector<running_stats> cor_stats;
+        if (A.covariances) {
+            cor_stats.resize(A.b);
+            size_t cov_index=0;
+            for (size_t i=0; i<A.b; ++i) {
+                for (size_t j=0; j<i; ++j) {
+                    double r=cov[cov_index++].covariance();
+                    r/=std::sqrt(stats[i].variance()*stats[j].variance());
+                    cor_stats[i].insert(r);
+                    cor_stats[j].insert(r);
+                }
+            }
+        }
 
         for (size_t i=0; i<A.b; ++i) {
             const auto &S=stats[i];
 
-            std::cout << (i+1) << ',' << S.mean() << ',' << S.variance();
+            std::cout << (i+1) << ',' << S.mean() << ',' << S.cv();
             if (A.raw_counts) std::cout << ',' << S.min() << ',' << S.max();
+            if (A.covariances) {
+                const auto &C=cor_stats[i];
+                std::cout << ',' << C.min() << ',' << C.max();
+            }
             std::cout << '\n';
         }
     }
