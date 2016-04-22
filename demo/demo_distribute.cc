@@ -28,24 +28,31 @@ struct usage_error: fatal_error {
 
 const char *usage_text=
     "[OPTION]\n"
-    "  -m METHOD Method to use: steps, multinomial, oss\n"
+    "  -m METHOD Method to use: steps, multinomial, adjpareto, efraimidis, oss\n"
     "  -c N      Count to distribute\n"
     "  -c N-M    Select counts uniformly in interval [N,M]\n"
     "  -b N      Distribute among N bins\n"
-    "  -g RATIO  Distribute weights geometrically by RATIO\n"
+    "  -g RATIO  Distribute weights geometrically with first:last = RATIO\n"
+    "  -l RATIO  Distribute weights linearly with with first:last = RATIO\n"
     "  -n N      Run N trials (default 1)\n"
+    "  -d SEED   Initialise RNG seed to SEED\n"
     "  -C        Report raw counts, not normalised values\n"
-    "  -S        Print just summary statistics\n\n"
-    "  -V        (With -S) Calculate and print correlations\n\n"
+    "  -S        Print just summary statistics\n"
+    "  -V        (With -S) Calculate and print correlations\n"
     "  -T        Print timing statistics\n\n"
-    "The multinomial method assigns rounded-down values and then\n"
-    "distributes the remainder multinomially.\n"
-    "The oss method assigns rounded-down and then distributes the\n"
-    "remainder by ordered systematic sampling.\n\n"
-    "Normalised results are scaled by inverse bin weight; weights\n"
-    "are scaled so that the total weight is the number of bins.\n";
+    "Methods:\n"
+    "  The steps method is an adaption of the 0.9.1 STEPS implementation for\n"
+    "  comparison purposes. Other methods assign rounded-down values to each bin,\n"
+    "  and then distribute the remainded by a weighted sampling method, as follows.\n\n"
+    "  multinomial:    Multinomial with-replacement sampling\n"
+    "  oss:            Ordered systematic sampling without replacement\n"
+    "  adjpareto:      Adjusted Pareto reservoir sampling without replacement\n"
+    "  efraimidis:     Efraimidis and Spirakis reservoir sampling without replacement\n\n"
+    "Normalised results are scaled by inverse bin weight; weights are scaled so that\n"
+    "the total weight is the number of bins.\n";
 
-enum method_enum { STEPS, MULTINOMIAL, OSS, UNKNOWN_METHOD };
+enum method_enum { STEPS, MULTINOMIAL, OSS, ADJPARETO, EFRAIMIDIS, UNKNOWN_METHOD };
+enum weights_enum { CONSTANT, GEOMETRIC, LINEAR };
 
 struct cl_args {
     int N=1;    // number of trials
@@ -56,8 +63,10 @@ struct cl_args {
     bool raw_counts=false; // don't scale by weight in report
     bool emit_timing=false;
     bool covariances=false;
-    double weight_ratio=1; // ratio in weights between successive bins
+    double weight_ratio=1; // ratio in weights between successive bins in geometric
+    unsigned long seed=0;
 
+    weights_enum weights=CONSTANT;
     method_enum method=STEPS;
 };
 
@@ -65,6 +74,8 @@ std::pair<const char *,method_enum> method_tbl[]={
     {"steps", STEPS},
     {"multinomial", MULTINOMIAL},
     {"oss", OSS},
+    {"adjpareto", ADJPARETO},
+    {"efraimidis", EFRAIMIDIS},
     {0, UNKNOWN_METHOD}
 };
 
@@ -94,7 +105,8 @@ std::pair<int,int> parse_range(const char *s) {
 cl_args parse_cl_args(int argc,char **argv) {
     cl_args A;
 
-    enum parse_state_enum { no_opt, opt_c, opt_b, opt_g, opt_n, opt_m } parse_state = no_opt;
+    enum parse_state_enum { no_opt, opt_c, opt_b, opt_g, opt_l, opt_n, opt_m, opt_d }
+        parse_state = no_opt;
 
     int i=0;
     while (++i<argc) {
@@ -106,8 +118,10 @@ cl_args parse_cl_args(int argc,char **argv) {
             case 'c': parse_state=opt_c; break;
             case 'b': parse_state=opt_b; break;
             case 'g': parse_state=opt_g; break;
+            case 'l': parse_state=opt_l; break;
             case 'n': parse_state=opt_n; break;
             case 'm': parse_state=opt_m; break;
+            case 'd': parse_state=opt_d; break;
             case 'C': // no argument
                 A.raw_counts=true;
                 break;
@@ -134,6 +148,12 @@ cl_args parse_cl_args(int argc,char **argv) {
             break;
         case opt_g:
             A.weight_ratio=std::stod(arg);
+            A.weights=GEOMETRIC;
+            parse_state=no_opt;
+            break;
+        case opt_l:
+            A.weight_ratio=std::stod(arg);
+            A.weights=LINEAR;
             parse_state=no_opt;
             break;
         case opt_n:
@@ -144,6 +164,10 @@ cl_args parse_cl_args(int argc,char **argv) {
             A.method=keyword_lookup(method_tbl,arg);
             if (A.method==UNKNOWN_METHOD)
                 throw usage_error("unrecognized method "+std::string(arg));
+            parse_state=no_opt;
+            break;
+        case opt_d:
+            A.seed=std::stoul(arg);
             parse_state=no_opt;
             break;
         }
@@ -257,6 +281,9 @@ size_t distribute_common(unsigned c,std::vector<unsigned> &bin,
 
         bin[i]=a;
         weight[i]=q-(double)a;
+
+        //std::cerr << "pi[" << i << "]=" << weight[i] << "\n";
+
         asum+=a;
     }
     assert(asum<=c);
@@ -292,6 +319,47 @@ void distribute_oss(unsigned c, RNG &R,
     rdmini::ordered_systematic_sampler S(weight.begin(),weight.end());
     S.sample(bin.begin(),bin.end(),rdmini::functor_iterator([](unsigned &b) { ++b; }),R);
 }
+
+// input iterator that just counts up
+template <typename int_type>
+struct counting_iterator {
+    typedef int_type value_type;
+    typedef const value_type &reference;
+
+    value_type i;
+
+    explicit counting_iterator(int_type i_=0): i(i_) {}
+
+    bool operator==(counting_iterator x) const { return i==x.i; }
+    bool operator!=(counting_iterator x) const { return i!=x.i; }
+
+    reference operator*() const { return i; }
+    counting_iterator &operator++() { return ++i,*this; }
+    counting_iterator operator++(int) { counting_iterator x(*this); return ++i,x; }
+};
+
+template <typename ResSampler,typename RNG>
+void distribute_reservoir(unsigned c, RNG &R,
+                      std::vector<unsigned> &bin,
+                      std::vector<double> weight,
+                      double total_weight = 0)
+{
+    static std::uniform_real_distribution<double> U(0,1);
+    using from=counting_iterator<size_t>;
+    using to=counting_iterator<size_t>;
+
+    size_t r=distribute_common(c,bin,weight);
+    if (r==0) return;
+
+    std::vector<size_t> remainder(r);
+
+    ResSampler S(r,weight.begin(),weight.end());
+    size_t s=S.sample(from(0),to(bin.size()),remainder.begin(),R);
+
+    remainder.resize(s);
+    for (auto i: remainder) ++bin[i];
+}
+
 
 // running stats
 
@@ -356,7 +424,7 @@ struct running_cov {
 // harness
 
 void run_test(const cl_args &A) {
-    std::mt19937_64 R;
+    std::mt19937_64 R(A.seed);
 
     // print header
     if (!A.summary) {
@@ -366,12 +434,24 @@ void run_test(const cl_args &A) {
     }
 
     std::vector<double> weight(A.b);
-    if (A.weight_ratio==1) {
+    switch (A.weights) {
+    case CONSTANT:
         std::fill(weight.begin(),weight.end(),1.0);
-    }
-    else {
-        weight[0]=A.b*(A.weight_ratio-1)/(std::pow(A.weight_ratio,A.b)-1);
-        for (size_t i=1; i<A.b; ++i) weight[i]=A.weight_ratio*weight[i-1];
+        break;
+    case LINEAR:
+        {
+            double a=2.0/(A.b-1)*(A.weight_ratio-1)/(A.weight_ratio+1);
+            for (size_t i=0; i<A.b; ++i) 
+                weight[i]=1+a*(i-(A.b-1)*0.5);
+        }
+        break;
+    case GEOMETRIC:
+        {
+            double a=std::pow(A.weight_ratio,1.0/(A.b-1));
+            weight[0]=A.b*(a-1)/(std::pow(a,A.b)-1);
+            for (size_t i=1; i<A.b; ++i) weight[i]=a*weight[i-1];
+        }
+        break;
     }
 
     std::vector<unsigned> bin(A.b,0);
@@ -398,6 +478,12 @@ void run_test(const cl_args &A) {
             break;
         case OSS:
             distribute_oss(count,R,bin,weight);
+            break;
+        case ADJPARETO:
+            distribute_reservoir<rdmini::adjusted_pareto_sampler>(count,R,bin,weight);
+            break;
+        case EFRAIMIDIS:
+            distribute_reservoir<rdmini::efraimidis_spirakis_sampler>(count,R,bin,weight);
             break;
         default:
             throw fatal_error("unrecognized method");
