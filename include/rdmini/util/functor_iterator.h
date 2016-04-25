@@ -1,25 +1,29 @@
-#ifndef  FUNCTOR_ITERATOR_H_
+#ifndef FUNCTOR_ITERATOR_H_
 #define FUNCTOR_ITERATOR_H_
 
 #include <utility>
+#include <iterator>
 
 /** Present a functor/lambda/function object as an output iterator */
 
 namespace rdmini {
 
 template <typename F>
-struct functor_iterator_adaptor {
-    explicit functor_iterator_adaptor(const F &f_): p(f_) {}
-    
-    struct proxy {
+class functor_iterator_adaptor {
+    class proxy {
+        friend class functor_iterator_adaptor<F>;
         F f;
 
-        proxy(const F &f_): f(f_) {}
+        explicit proxy(const F &f_): f(f_) {}
 
+    public:
         template <typename V>
         void operator=(V &&v) { f(std::forward<V>(v)); }
     } p;
 
+public:
+    explicit functor_iterator_adaptor(const F &f_): p(f_) {}
+    
     // output iterator interface
     proxy &operator*() { return p; }
     functor_iterator_adaptor &operator++() { return *this; }
@@ -37,4 +41,4 @@ functor_iterator_adaptor<F> functor_iterator(const F &f) { return functor_iterat
 
 }
 
-#endif // ndef  FUNCTOR_ITERATOR_H_
+#endif // ndef FUNCTOR_ITERATOR_H_
