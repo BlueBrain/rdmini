@@ -18,7 +18,6 @@ template <typename KeyType,
 struct ssa_direct {
     typedef KeyType key_type;
     typedef ValueType value_type;
-    typedef value_type& reference;
 
 private:
     size_t n_key;

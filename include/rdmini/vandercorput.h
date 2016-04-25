@@ -7,19 +7,18 @@
 
 //-----------------------------------------------------------------------------
 namespace rdmini{
-class Linear_RNG {
+class counting_generator {
     public:
         typedef unsigned result_type;
 
     private:
-        result_type _s  = 0;
-        static constexpr result_type Nmax = std::numeric_limits<unsigned int>::max();
+        result_type s  = 0;
 
     public:
-        result_type operator()(){ return (_s++)%Nmax; }
+        result_type operator()(){ return s++; }
 
         static result_type min() { return 0; }
-        static result_type max() { return Nmax-1; }
+        static result_type max() { return std::numeric_limits<result_type>::max(); }
 };
 
 
@@ -32,33 +31,33 @@ class vdc_uniform_real_distribution {
         // Nested class: param_type
         class param_type {
         private:
-            RealType _M_a;
-            RealType _M_b;
+            RealType M_a;
+            RealType M_b;
         public: 
-            explicit param_type(RealType a=0, RealType b=1) : _M_a(a), _M_b(b) {}
-            result_type a() const { return _M_a;}
-            result_type b() const { return _M_b;}
+            explicit param_type(RealType a=0, RealType b=1) : M_a(a), M_b(b) {}
+            result_type a() const { return M_a;}
+            result_type b() const { return M_b;}
         };
 
         // Constructor (1)
-        explicit vdc_uniform_real_distribution(RealType a=0, RealType b=1) : _M_param(a,b) {}
+        explicit vdc_uniform_real_distribution(RealType a=0, RealType b=1) : M_param(a,b) {}
         
         // Constructor (2)
-        explicit vdc_uniform_real_distribution(const param_type& p) : _M_param(p) {}
+        explicit vdc_uniform_real_distribution(const param_type& p) : M_param(p) {}
 
         // Reset the distribution rate (nothing to be done)
         void reset() {}
 
         // Getter of the parameter
-        param_type param() const { return _M_param; }
+        param_type param() const { return M_param; }
 
         // Setter of the parameter
-        void param(const param_type& p) { _M_param = p; }  
+        void param(const param_type& p) { M_param = p; }  
 
         // Overload call operator (1)
         template <class Generator>
             result_type operator()(Generator &g) {
-                return (*this)(g,_M_param);
+                return (*this)(g,M_param);
             }
         
         // Overload call operator (2)
@@ -75,11 +74,11 @@ class vdc_uniform_real_distribution {
             }
 
         // Getters of min and max possible values
-        result_type min() const { return _M_param.a(); }
-        result_type max() const { return _M_param.b(); }
+        result_type min() const { return M_param.a(); }
+        result_type max() const { return M_param.b(); }
 
     private:
-        param_type _M_param;
+        param_type M_param;
 };
 }
 
