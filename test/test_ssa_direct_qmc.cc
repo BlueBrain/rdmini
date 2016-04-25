@@ -98,7 +98,7 @@ TEST(SsaDistribution, MomentTest) {
         }
     }
             
-    EXPECT_TRUE(KH_mu1) << os1;
-    EXPECT_TRUE(KH_mu2) << os2;
+    EXPECT_TRUE(KH_mu1) << os1.str();
+    EXPECT_TRUE(KH_mu2) << os2.str();
 }
 
