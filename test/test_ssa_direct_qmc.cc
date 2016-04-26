@@ -31,17 +31,19 @@ namespace KHineq {
     constexpr double c_b  = (2.0>1.0+1.0/base+a_b)?(2.0):(1.0+1.0/base+a_b);
     
     template <typename Fun>
-    void kh_test(rdmini::ssa_direct<size_t,double> ssa, const Fun& f, double V_f, double exact_mu, std::size_t n_events) {
+    void kh_test(const rdmini::ssa_direct<size_t,double>& ssa, const Fun& f, double V_f, double exact_mu, std::size_t n_events) {
         rdmini::counting_generator Rlin;
         rdmini::vdc_uniform_real_distribution<double> U_vdc(0.,1.);
         double approx_mu =0.;
+        double err_bound_theory = 0.;
         std::ostringstream os;
         for (std::size_t N=0; N<n_events; ++N) {
-            approx_mu = ( approx_mu*N + f(ssa.inverse_cdf(U_vdc(Rlin))) )/(N+1);
-            if (std::abs(approx_mu-exact_mu)>V_f*(f_b*std::log(N+1)/(N+1)+c_b/(N+1))) {
+            approx_mu       = ( approx_mu*N + f(ssa.inverse_cdf(U_vdc(Rlin))) )/(N+1);
+            err_bound_theory  =  V_f*(f_b*std::log(N+1)/(N+1)+c_b/(N+1));
+            if (std::abs(approx_mu-exact_mu) > err_bound_theory) {
                 os << "After " << N << " iterations:"
-                    << " expected max error " << f_b*std::log(N+1)/(N+1)+c_b/(N+1)
-                    << " but observed error " << std::abs(approx_mu-exact_mu) << std::endl;
+                    << " expected max error " << err_bound_theory
+                    << " but observed error " << std::abs(approx_mu-exact_mu) << "\n";
                 throw(std::runtime_error(os.str()));
             }
         }
@@ -84,57 +86,14 @@ TEST(SsaDistribution, MomentTest) {
     // error satisfies the theoretical error estimate by Koksma-Hlawka
     //      err_N <= V_fun * Dstar(x1,...,xN)
     // where V_fun is the total variation of the integrand.
-    /*
-    constexpr double V_f_mu1 = n_proc;          // total variation for mu1
-    constexpr double V_f_mu2 = n_proc*n_proc;   // total variation for mu2
-    constexpr size_t n_events = 1000*1000;
-    std::vector<double> appr_mu1(n_events);
-    size_t idx_ssa = 0.;
-    double approx_mu1 = 0.;
-    double approx_mu2 = 0.;
-    idx_ssa = ssa.inverse_cdf(U_vdc(Rlin));
-    approx_mu1 += idx_ssa;
-    approx_mu2 += idx_ssa*idx_ssa;
-    bool KH_mu1 = true, KH_mu2 = true;
-    std::ostringstream os1, os2;
-    for (size_t N=1; N<n_events && (KH_mu1 || KH_mu2); ++N) {
-        idx_ssa = ssa.inverse_cdf(U_vdc(Rlin));
-        if (KH_mu1) {
-            approx_mu1 = (approx_mu1*N + idx_ssa)/(N+1); 
-            if (std::abs(approx_mu1-exact_mu1)>V_f_mu1*(KHineq::f_b*std::log(N+1)/(N+1)+KHineq::c_b/(N+1))) {
-                os1 << "After " << N << "iterations:"
-                    << " expected max error " << KHineq::f_b*std::log(N+1)/(N+1)+KHineq::c_b/(N+1)
-                    << " but observed error " << std::abs(approx_mu1-exact_mu1) << std::endl;
-                KH_mu1 = false;
-            }
-        }
-        if (KH_mu2) {
-            approx_mu2 = (approx_mu2*N + idx_ssa*idx_ssa)/(N+1); 
-            if (std::abs(approx_mu2-exact_mu2)>V_f_mu2*(KHineq::f_b*std::log(N+1)/(N+1)+KHineq::c_b/(N+1))) {
-                os2 << "After " << N << "iterations:"
-                    << " expected max error " << KHineq::f_b*std::log(N+1)/(N+1)+KHineq::c_b/(N+1)
-                    << " but observed error " << std::abs(approx_mu2-exact_mu2) << std::endl;
-                KH_mu2 = false;
-            }
-        }
-    }
-            
-    EXPECT_TRUE(KH_mu1) << os1.str();
-    EXPECT_TRUE(KH_mu2) << os2.str();
-*/
     constexpr double V_f_mu1 = n_proc;
     constexpr double V_f_mu2 = n_proc*n_proc;
     constexpr size_t n_events = 1000*1000;
     try {
         KHineq::kh_test(ssa, [](size_t j){return j;}, V_f_mu1, exact_mu1, n_events);
-    }
-    catch (std::runtime_error err) {
-        FAIL() << err.what();
-    }
-    try {
         KHineq::kh_test(ssa, [](size_t j){return j*j;}, V_f_mu2, exact_mu2, n_events);
     }
-    catch (std::runtime_error err) {
+    catch (const std::runtime_error& err) {
         FAIL() << err.what();
     }
 
