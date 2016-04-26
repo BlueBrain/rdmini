@@ -195,80 +195,54 @@ struct multinomial_draw_sampler {
     }
 };
 
-/** Generic order reservoir sampler
- *
- * Parameterized by sample size n, generalized weights w_i and
- * a functor f(u,w) taking a uniformly distributed
- * number in the range [0,1) and a weight w, returning
- * a real value used for the ordering.
- */
+namespace impl {
+    /** Generic order reservoir sampling implementation
+     *
+     * \param n    Reservoir size (unsigned integral type)
+     * \param b    Beginning of population range (input iterator)
+     * \param e    End of population range (input iterator)
+     * \param o    Reservoir (random access output iterator)
+     * \param f    Order-generating functor
+     * \return     Number or items stored in reservoir
+     */
 
-template <typename F>
-struct order_reservoir_sampler {
-    using size_type=std::size_t;
-    using real_type=double;
+    template <typename size_type,typename InIter,typename OutIter,typename F>
+    size_type order_reservoir_sample(size_type n,InIter b,InIter e,OutIter o,F f) {
+        using order_type=typename std::result_of<F()>::type;
 
-    struct param_type {
-        size_type n;
-        F f;
-        std::vector<real_type> w;
+        if (n==0) return 0;
 
-        param_type() {}
-
-        template <typename Iter>
-        param_type(size_type n_,F f_,Iter w_begin,Iter w_end): n(n_),f(f_),w(w_begin,w_end) {}
-    } P;
-
-    order_reservoir_sampler() {}
-
-    template <typename Iter>
-    adjusted_pareto_sampler(size_type n_,F f_,Iter b,Iter e): P(n_,f,b,e) {}
-
-    void param(const param_type &P_) { P=P_; }
-    param_type param() const { return P; }
-
-    void reset() {} // nop
-
-    size_type min() const { return P.n; }
-    size_type max() const { return P.n; }
-    size_type size() const { return 0; }
-
-    // OutIter must be random access
-    template <typename FwdIter,typename OutIter,typename Rng>
-    size_type sample(FwdIter b,FwdIter e,OutIter o,Rng &g) {
-        if (P.n==0) return 0;
-
-        std::uniform_real_distribution<real_type> u;
-        using key=std::pair<real_type,size_type>;
+        using key=std::pair<order_type,size_type>;
 
         std::vector<key> heap;
-        heap.reserve(P.n);
+        heap.reserve(n);
 
         size_type i=0;
-        for (; i<P.n && i<P.q.size() && b!=e; ++i) {
-            heap.emplace_back(P.f(P.w[i],u(g)),i);
+        for (; i<n && b!=e; ++i) {
+            heap.emplace_back(f(),i);
             o[i]=*b++;
         }
         
-        if (i<P.n) return i;
+        if (i<n) return i;
 
         // heapify
-        std::make_heap(o,o+P.n);
+        std::make_heap(heap.begin(),heap.end());
 
         // keep least P.n elements...
         for (; b!=e; ++b) {
-        real_type q=P.f(P.w[i],u(g));
-            if (q<heap.front()) {
+            order_type q=f();
+            if (q<heap.front().first) {
                 key k{q,heap.front().second};
                 std::pop_heap(heap.begin(),heap.end());
-                heap.last()=k;
+                heap.back()=k;
                 o[k.second]=*b;
                 std::push_heap(heap.begin(),heap.end());
             }
         }
 
-        return P.n;
-};
+        return n;
+    }
+}
 
 /** Adjusted Pareto sampler
  *
@@ -302,8 +276,35 @@ struct adjusted_pareto_sampler {
         param_type() {}
 
         template <typename Iter>
-        param_type(size_type n_,Iter pi_begin,Iter pi_end): n(n_), qcoef(pi_begin,pi_end) {}
+        param_type(size_type n_,Iter pi_begin,Iter pi_end): n(n_), qcoef(pi_begin,pi_end) {
+            real_type d=0;
+            for (real_type q: qcoef) d+=q*(1-q);
+
+            real_type ood2=1/(d*d);
+            for (real_type &q: qcoef) {
+                double loga=q*(1-q)*(q-real_type(0.5))*ood2;
+                double a=1+loga+0.5*loga*loga; // approximates exp(loga) as loga is small.
+                q=(1-q)/q*a;
+            }
+        }
     } P;
+
+    template <typename Rng>
+    struct next_order {
+        std::uniform_real_distribution<real_type> U;
+        const std::vector<real_type> &q;
+        size_type i;
+        Rng &g;
+        
+        explicit next_order(const param_type &P,Rng &g_): q(P.qcoef),i(0),g(g_) {}
+
+        real_type operator()() {
+            if (i>=q.size()) return std::numeric_limits<real_type>::max();
+            real_type r=q[i++];
+            real_type u=U(g);
+            return u*r/(1-u);
+        }
+    };
  
     void param(const param_type &P_) { P=P_; }
     param_type param() const { return P; }
@@ -312,23 +313,78 @@ struct adjusted_pareto_sampler {
 
     size_type min() const { return P.n; }
     size_type max() const { return P.n; }
-    size_type size() const { return P.qcoef.size(); }
+    size_type size() const { return P.n; }
 
-    template <typename FwdIter,typename OutIter,typename Rng>
-    size_type sample(FwdIter b,FwdIter e,OutIter o,Rng &g) {
-        // draw n items from categorical distribution
-        if (n==0) return 0;
-
-        if (std::distance(b,e)<size()) throw std::out_of_range("population range too small");
-
-        for (size_type i=0; i<n; ++i) {
-            FwdIter x=std::next(b,cat(g));
-            *o++=*x;
-        }
-        return n;
+    template <typename InIter,typename OutIter,typename Rng>
+    size_type sample(InIter b,InIter e,OutIter o,Rng &g) {
+        next_order<Rng> f(P,g);
+        return impl::order_reservoir_sample(P.n,b,e,o,f);
     }
 };
 
+/* Efraimidis and Spirakis sampler
+ *
+ * Reservoir implementation of Efraimidis and Spirakis (2006)
+ * method for weighted sampling without replacement
+ * (doi: 10.1016/j.ipl.2005.11.003).
+ *
+ * Parameters are not the inclusion probabilities, but the proportional
+ * weights to draw an item each round. For weights not too distant
+ * from n/N (n being sample size, N the population size), this approximates
+ * the inclusion probabilities.
+ */
+
+struct efraimidis_spirakis_sampler {
+    using size_type=std::size_t;
+    using real_type=double;
+
+    efraimidis_spirakis_sampler() {}
+
+    template <typename Iter>
+    efraimidis_spirakis_sampler(size_type n_,Iter b,Iter e): P(n_,b,e) {}
+
+    struct param_type {
+        size_type n=0;
+        std::vector<real_type> oolambda;
+
+        param_type() {}
+
+        template <typename Iter>
+        param_type(size_type n_,Iter pi_begin,Iter pi_end): n(n_), oolambda(pi_begin,pi_end) {
+            for (auto &l: oolambda) l=1/l;
+        }
+    } P;
+
+    template <typename Rng>
+    struct next_order {
+        std::exponential_distribution<real_type> E;
+        const std::vector<real_type> &q;
+        size_type i;
+        Rng &g;
+        
+        explicit next_order(const param_type &P,Rng &g_): q(P.oolambda),i(0),g(g_) {}
+
+        real_type operator()() {
+            if (i>=q.size()) return std::numeric_limits<real_type>::max();
+            return E(g)*q[i++];
+        }
+    };
+ 
+    void param(const param_type &P_) { P=P_; }
+    param_type param() const { return P; }
+
+    void reset() {} // nop
+
+    size_type min() const { return P.n; }
+    size_type max() const { return P.n; }
+    size_type size() const { return P.n; }
+
+    template <typename InIter,typename OutIter,typename Rng>
+    size_type sample(InIter b,InIter e,OutIter o,Rng &g) {
+        next_order<Rng> f(P,g);
+        return impl::order_reservoir_sample(P.n,b,e,o,f);
+    }
+};
 
 
 } // namespace rdmini
