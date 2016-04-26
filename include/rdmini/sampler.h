@@ -195,6 +195,81 @@ struct multinomial_draw_sampler {
     }
 };
 
+/** Generic order reservoir sampler
+ *
+ * Parameterized by sample size n, generalized weights w_i and
+ * a functor f(u,w) taking a uniformly distributed
+ * number in the range [0,1) and a weight w, returning
+ * a real value used for the ordering.
+ */
+
+template <typename F>
+struct order_reservoir_sampler {
+    using size_type=std::size_t;
+    using real_type=double;
+
+    struct param_type {
+        size_type n;
+        F f;
+        std::vector<real_type> w;
+
+        param_type() {}
+
+        template <typename Iter>
+        param_type(size_type n_,F f_,Iter w_begin,Iter w_end): n(n_),f(f_),w(w_begin,w_end) {}
+    } P;
+
+    order_reservoir_sampler() {}
+
+    template <typename Iter>
+    adjusted_pareto_sampler(size_type n_,F f_,Iter b,Iter e): P(n_,f,b,e) {}
+
+    void param(const param_type &P_) { P=P_; }
+    param_type param() const { return P; }
+
+    void reset() {} // nop
+
+    size_type min() const { return P.n; }
+    size_type max() const { return P.n; }
+    size_type size() const { return 0; }
+
+    // OutIter must be random access
+    template <typename FwdIter,typename OutIter,typename Rng>
+    size_type sample(FwdIter b,FwdIter e,OutIter o,Rng &g) {
+        if (P.n==0) return 0;
+
+        std::uniform_real_distribution<real_type> u;
+        using key=std::pair<real_type,size_type>;
+
+        std::vector<key> heap;
+        heap.reserve(P.n);
+
+        size_type i=0;
+        for (; i<P.n && i<P.q.size() && b!=e; ++i) {
+            heap.emplace_back(P.f(P.w[i],u(g)),i);
+            o[i]=*b++;
+        }
+        
+        if (i<P.n) return i;
+
+        // heapify
+        std::make_heap(o,o+P.n);
+
+        // keep least P.n elements...
+        for (; b!=e; ++b) {
+        real_type q=P.f(P.w[i],u(g));
+            if (q<heap.front()) {
+                key k{q,heap.front().second};
+                std::pop_heap(heap.begin(),heap.end());
+                heap.last()=k;
+                o[k.second]=*b;
+                std::push_heap(heap.begin(),heap.end());
+            }
+        }
+
+        return P.n;
+};
+
 /** Adjusted Pareto sampler
  *
  * Sample n items without replacement using an order method
