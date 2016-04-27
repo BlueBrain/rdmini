@@ -258,6 +258,11 @@ namespace impl {
  * as d approaches infinity.
  *
  * The supplied inclusion probabilities should sum to n.
+ *
+ * Reference:
+ * Lundqvist, Anders (2007). On the distance between some
+ * πps sampling designs. Acta Applicandae Mathematicae 97,
+ * 79–97. doi:10.1007/s10440-007-9134-x
  */
 
 struct adjusted_pareto_sampler {
@@ -332,6 +337,11 @@ struct adjusted_pareto_sampler {
  * weights to draw an item each round. For weights not too distant
  * from n/N (n being sample size, N the population size), this approximates
  * the inclusion probabilities.
+ *
+ * Reference:
+ * Efraimidis, Pavlos and Spirakis, Paul (2006). Weighted random sampling
+ * with a reservoir. Information Processing Letters 97(5), 181–185.
+ * doi:10.1016/j.ipl.2005.11.003
  */
 
 struct efraimidis_spirakis_sampler {
@@ -362,7 +372,7 @@ struct efraimidis_spirakis_sampler {
         size_type i;
         Rng &g;
         
-        explicit next_order(const param_type &P,Rng &g_): q(P.oolambda),i(0),g(g_) {}
+        explicit next_order(const param_type &P,Rng &g_): q(P.oolambda), i(0), g(g_) {}
 
         real_type operator()() {
             if (i>=q.size()) return std::numeric_limits<real_type>::max();
@@ -384,6 +394,65 @@ struct efraimidis_spirakis_sampler {
         next_order<Rng> f(P,g);
         return impl::order_reservoir_sample(P.n,b,e,o,f);
     }
+};
+
+/** Conditional Poisson samplers
+ *
+ * Two phases:
+ * 1. firstly adjust inclusion parameters via Quasi-Newton (cost O(N·n) will probably dominate).
+ * 2. use multinomial (via categorical and hashtable or via binomial sampling) or poisson rejective
+ */
+
+namespace impl {
+    struct cps_param_type {
+        size_t n;
+        std::vector<double> pi;
+
+        cps_param_type(size_t n_,Iter pi_begin,Iter pi_end): n(n_), pi(pi_begin,pi_end) {
+            size_t N=pi.size();
+
+            // normalize (under assumption that each pi < 1/n)
+            double s=n/std::accumulate(pi.begin(),pi.end());
+            for (auto &p: pi) p*=s;
+
+            // quasi-Newton following Tillé §5.6.3
+            std::vector<double> pibar(pi),psi(N);
+
+            do {
+                // compute psi(pibar,n)
+                std::fill(psi.begin(),psi.end(),0.0);
+                for (size_t j=1; j<=n; ++j) {
+                    double denom=0;
+                    for (size_t i=0; i<N; ++i) {
+                        psi[i]=pibar[i]/(1-pibar[i])*(1-psi[i]);
+                        denom+=psi[i];
+                    }
+                    double scale=j/denom;
+                    for (size_t i=0; i<N; ++i) {
+                        psi[i]*=scale;
+                    }
+                }
+
+        max_delta=0;
+        for (size_t i=0; i<N; ++i) {
+            double delta=pi[i]-psi[i];
+            pibar[i]+=delta;
+
+            delta=std::abs(delta);
+            if (delta>max_delta) max_delta=delta;
+        }
+        pdump(pibar);
+        std::cout << "max_delta=" << std::scientific << max_delta << '\n';
+    }
+    while (max_delta>tol);
+        }
+    };
+
+}
+
+struct cps_poisson_rejective {
+
+
 };
 
 
