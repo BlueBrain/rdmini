@@ -37,9 +37,9 @@ namespace KHineq {
         double approx_mu =0.;
         double err_bound_theory = 0.;
         std::ostringstream os;
-        for (std::size_t N=0; N<n_events; ++N) {
-            approx_mu       = ( approx_mu*N + f(ssa.inverse_cdf(U_vdc(Rlin))) )/(N+1);
-            err_bound_theory  =  V_f*(f_b*std::log(N+1)/(N+1)+c_b/(N+1));
+        for (std::size_t N=1; N<=n_events; ++N) {
+            approx_mu       = ( approx_mu*(N-1) + f(ssa.inverse_cdf(U_vdc(Rlin))) )/N;
+            err_bound_theory  =  V_f*(f_b*std::log(N)/N+c_b/N);
             if (std::abs(approx_mu-exact_mu) > err_bound_theory) {
                 os << "After " << N << " iterations:"
                     << " expected max error " << err_bound_theory
