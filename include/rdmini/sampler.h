@@ -1,10 +1,12 @@
 #ifndef SAMPLE_H_
 #define SAMPLE_H_
 
-#include <cstddef>
-#include <random>
-#include <vector>
 #include <cmath>
+#include <cstddef>
+#include <numeric>
+#include <random>
+#include <stdexcept>
+#include <vector>
 
 #include "rdmini/categorical.h"
 
@@ -164,7 +166,11 @@ struct multinomial_draw_sampler {
         param_type(size_type n_,const categorical::param_type &p): n(n_), cat_param(p) {}
 
         template <typename Iter>
-        param_type(size_type n_,Iter mu_begin,Iter mu_end): n(n_), cat_param(mu_begin,mu_end) {}
+        //param_type(size_type n_,Iter mu_begin,Iter mu_end): n(n_), cat_param(mu_begin,mu_end) {}
+        param_type(size_type n_,Iter mu_begin,Iter mu_end): n(n_) {
+            std::vector<real_type> pbis={0.07,0.17,0.41,0.61,0.83,0.91};
+            cat_param=categorical::param_type(pbis.begin(),pbis.end());
+        }
     };
 
     void param(const param_type &P) {
@@ -258,6 +264,11 @@ namespace impl {
  * as d approaches infinity.
  *
  * The supplied inclusion probabilities should sum to n.
+ *
+ * Reference:
+ * Lundqvist, Anders (2007). On the distance between some
+ * πps sampling designs. Acta Applicandae Mathematicae 97,
+ * 79–97. doi:10.1007/s10440-007-9134-x
  */
 
 struct adjusted_pareto_sampler {
@@ -282,8 +293,8 @@ struct adjusted_pareto_sampler {
 
             real_type ood2=1/(d*d);
             for (real_type &q: qcoef) {
-                double loga=q*(1-q)*(q-real_type(0.5))*ood2;
-                double a=1+loga+0.5*loga*loga; // approximates exp(loga) as loga is small.
+                real_type loga=q*(1-q)*(q-real_type(0.5))*ood2;
+                real_type a=1+loga+0.5*loga*loga; // approximates exp(loga) as loga is small.
                 q=(1-q)/q*a;
             }
         }
@@ -332,6 +343,11 @@ struct adjusted_pareto_sampler {
  * weights to draw an item each round. For weights not too distant
  * from n/N (n being sample size, N the population size), this approximates
  * the inclusion probabilities.
+ *
+ * Reference:
+ * Efraimidis, Pavlos and Spirakis, Paul (2006). Weighted random sampling
+ * with a reservoir. Information Processing Letters 97(5), 181–185.
+ * doi:10.1016/j.ipl.2005.11.003
  */
 
 struct efraimidis_spirakis_sampler {
@@ -362,7 +378,7 @@ struct efraimidis_spirakis_sampler {
         size_type i;
         Rng &g;
         
-        explicit next_order(const param_type &P,Rng &g_): q(P.oolambda),i(0),g(g_) {}
+        explicit next_order(const param_type &P,Rng &g_): q(P.oolambda), i(0), g(g_) {}
 
         real_type operator()() {
             if (i>=q.size()) return std::numeric_limits<real_type>::max();
@@ -383,6 +399,191 @@ struct efraimidis_spirakis_sampler {
     size_type sample(InIter b,InIter e,OutIter o,Rng &g) {
         next_order<Rng> f(P,g);
         return impl::order_reservoir_sample(P.n,b,e,o,f);
+    }
+};
+
+/** Conditional Poisson samplers
+ *
+ * Two phases:
+ * 1. firstly adjust inclusion parameters via Quasi-Newton (cost O(N·n) will probably dominate).
+ * 2. use multinomial (via categorical and hashtable or via binomial sampling) or poisson rejective
+ */
+
+namespace impl {
+    // compute conditional poisson inclusion probabilities from non-conditional
+    // poisson inclusion probabilities.
+
+    template <typename real_type>
+    void conditional_psi(size_t n,const std::vector<real_type> pi,std::vector<real_type> &psi) {
+        size_t N=pi.size();
+        psi.assign(N,0);
+
+        for (size_t j=1; j<=n; ++j) {
+            real_type denom=0;
+            for (size_t i=0; i<N; ++i) {
+                psi[i]=pi[i]/(1-pi[i])*(1-psi[i]);
+                denom+=psi[i];
+            }
+
+            real_type scale=j/denom;
+            for (auto &x: psi) {
+                x*=scale;
+                if (x>1) throw std::runtime_error("cps forward inclusion probability calculation diverged");
+            }
+        }
+    }
+
+    
+    // invert inclusion probabilities in-place to the with-replacement Poisson probabilities
+    template <typename real_type=double>
+    void invert_cps_probabilities(size_t n,std::vector<real_type> &pi,
+                                  real_type abs_tol) {
+        auto N=pi.size();
+
+        // quasi-Newton following Tillé §5.6.3
+        // This is not guaranteed to converge! So we'll try a greedy line search
+        // on the q-N direction at each step. This still won't necessarily converge,
+        // but it is more robust than the original algorithm.
+
+        std::vector<real_type> pibar(pi),pix(N),psi(N),delta(N);
+
+        // adaptive step scaling parameters
+        double alpha=1;   // step scale
+        double beta=0.2;  // scale towards one when admissible
+        double gamma=0.1; // scale towards zero when inadmissible
+
+        // compute initial directional vector pi-psi(pibar,n)
+        conditional_psi(n,pibar,psi);
+        real_type dmax=0;
+        for (size_t i=0; i<N; ++i) {
+            delta[i]=pi[i]-psi[i];
+            dmax=std::max(dmax,std::abs(delta[i]));
+        }
+
+        while (dmax>abs_tol) {
+            double v=0;
+
+            // compute candidate pix = pibar + alpha*delta
+            for (size_t i=0; i<N; ++i) {
+                pix[i]=pibar[i]+alpha*delta[i];
+                if (pix[i]<0 || pix[i]>1) goto inadmissible;
+            }
+
+            // compute psi
+            conditional_psi(n,pix,psi);
+
+            // check deviation
+            for (size_t i=0; i<N; ++i)
+                v=std::max(v,std::abs(pi[i]-psi[i]));
+
+            if (v>=dmax) goto inadmissible;
+
+            // looks admissible! recompute delta
+            pibar=pix;
+
+            dmax=0;
+            for (size_t i=0; i<N; ++i) {
+                delta[i]=pi[i]-psi[i];
+
+                dmax=std::max(dmax,std::abs(delta[i]));
+            }
+
+            alpha=1-(1-beta)*(1-alpha);
+            continue;
+
+        inadmissible:
+            // reduce alpha and try again
+            alpha*=gamma;
+            if (alpha<abs_tol)
+                throw std::runtime_error("cps pi inversion failed to converge, with delta "+std::to_string(dmax));
+        }
+
+        pi=pibar;
+    }
+}
+
+struct cps_multinomial_rejective {
+    using size_type=std::size_t;
+    using real_type=double;
+
+    static constexpr real_type default_tolerance=4*std::numeric_limits<real_type>::epsilon();
+
+    cps_multinomial_rejective() {}
+
+    template <typename Iter>
+    cps_multinomial_rejective(size_type n_,Iter b,Iter e,double abs_tol=default_tolerance): P(n_,b,e,abs_tol) {}
+
+    struct param_type {
+        size_type n=0;
+        categorical_distribution<size_type,real_type> C;
+
+        param_type() {}
+
+        template <typename Iter>
+        param_type(size_type n_,Iter pi_begin,Iter pi_end,double abs_tol): n(n_) {
+            std::vector<real_type> pi(pi_begin,pi_end);
+            impl::invert_cps_probabilities(n,pi,abs_tol);
+
+            // convert pi for unconditional Poisson to mu for multinomial on n
+            double sum=0;
+            for (auto &x: pi) {
+                x=x/(1-x);
+                sum+=x;
+            }
+            real_type scale=n/sum;
+            for (auto &x: pi) x*=scale;
+
+            C=categorical_distribution<size_type,real_type>(pi.begin(),pi.end());
+        }
+
+        size_type size() const { return C.param().size(); }
+    } P;
+
+    void param(const param_type &P_) { P=P_; }
+    param_type param() const { return P; }
+
+    void reset() {} // nop
+
+    size_type min() const { return P.n; }
+    size_type max() const { return P.n; }
+    size_type size() const { return P.size(); }
+
+    // InIter must be a random-access input iterator
+    // OutIter must be a forward output iterator
+    template <typename InIter,typename OutIter,typename Rng>
+    size_type sample(InIter b,InIter e,OutIter o,Rng &g) {
+        size_t N=P.size();
+        size_t popN=b<e?size_type(std::distance(b,e)):0;
+        if (popN<N) throw std::invalid_argument("population too small");
+
+        if (popN<P.n) {
+            std::copy(b,e,o);
+            return popN;
+        }
+        
+        // Draw n from categorical, but start over if we draw same element twice.
+        std::vector<bool> drawn(N,false);
+
+        OutIter w=o;
+        size_type i=0;
+        size_type rejects=0;
+        while (i<P.n) {
+            size_type k=P.C(g);
+            if (drawn[k]) {
+                // start over
+                drawn.assign(N,false);
+                w=o;
+                i=0;
+                ++rejects;
+            }
+            else {
+                drawn[k]=true;
+                *w++=b[k];
+                ++i;
+            }
+        }
+
+        return P.n;
     }
 };
 

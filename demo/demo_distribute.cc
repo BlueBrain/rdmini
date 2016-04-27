@@ -7,10 +7,9 @@
 #include <cstring>
 #include <cassert>
 
-#include "rdmini/categorical.h"
 #include "rdmini/sampler.h"
 #include "rdmini/timer.h"
-#include "rdmini/util/functor_iterator.h"
+#include "rdmini/util/iterator.h"
 
 using std::size_t;
 
@@ -28,7 +27,8 @@ struct usage_error: fatal_error {
 
 const char *usage_text=
     "[OPTION]\n"
-    "  -m METHOD Method to use: steps, multinomial, adjpareto, efraimidis, oss\n"
+    "  -m METHOD Method to use: steps, multinomial, adjpareto, efraimidis, oss,\n"
+    "                           cpsprej\n"
     "  -c N      Count to distribute\n"
     "  -c N-M    Select counts uniformly in interval [N,M]\n"
     "  -b N      Distribute among N bins\n"
@@ -47,11 +47,12 @@ const char *usage_text=
     "  multinomial:    Multinomial with-replacement sampling\n"
     "  oss:            Ordered systematic sampling without replacement\n"
     "  adjpareto:      Adjusted Pareto reservoir sampling without replacement\n"
-    "  efraimidis:     Efraimidis and Spirakis reservoir sampling without replacement\n\n"
+    "  efraimidis:     Efraimidis and Spirakis reservoir sampling without replacement\n"
+    "  cpsprej:       Conditional Poisson sampler using Poisson rejective scheme\n\n"
     "Normalised results are scaled by inverse bin weight; weights are scaled so that\n"
     "the total weight is the number of bins.\n";
 
-enum method_enum { STEPS, MULTINOMIAL, OSS, ADJPARETO, EFRAIMIDIS, UNKNOWN_METHOD };
+enum method_enum { STEPS, MULTINOMIAL, OSS, ADJPARETO, EFRAIMIDIS, CPSPREJ, UNKNOWN_METHOD };
 enum weights_enum { CONSTANT, GEOMETRIC, LINEAR };
 
 struct cl_args {
@@ -76,6 +77,7 @@ std::pair<const char *,method_enum> method_tbl[]={
     {"oss", OSS},
     {"adjpareto", ADJPARETO},
     {"efraimidis", EFRAIMIDIS},
+    {"cpsprej", CPSPREJ},
     {0, UNKNOWN_METHOD}
 };
 
@@ -264,6 +266,7 @@ void distribute_steps(unsigned c, Rng &R,
 
 // Distribute rounded-down values, return deficit and write residuals back
 // into weights.
+
 size_t distribute_common(unsigned c,std::vector<unsigned> &bin,
                          std::vector<double> &weight) {
     size_t N=bin.size();
@@ -320,46 +323,30 @@ void distribute_oss(unsigned c, RNG &R,
     S.sample(bin.begin(),bin.end(),rdmini::functor_iterator([](unsigned &b) { ++b; }),R);
 }
 
-// input iterator that just counts up
-template <typename int_type>
-struct counting_iterator {
-    typedef int_type value_type;
-    typedef const value_type &reference;
+// Distribute using a rejection or reservoir sampler that
+// needs to overwrite the output.
 
-    value_type i;
-
-    explicit counting_iterator(int_type i_=0): i(i_) {}
-
-    bool operator==(counting_iterator x) const { return i==x.i; }
-    bool operator!=(counting_iterator x) const { return i!=x.i; }
-
-    reference operator*() const { return i; }
-    counting_iterator &operator++() { return ++i,*this; }
-    counting_iterator operator++(int) { counting_iterator x(*this); return ++i,x; }
-};
-
-template <typename ResSampler,typename RNG>
-void distribute_reservoir(unsigned c, RNG &R,
+template <typename NSampler,typename RNG>
+void distribute_generic(unsigned c, RNG &R,
                       std::vector<unsigned> &bin,
                       std::vector<double> weight,
                       double total_weight = 0)
 {
     static std::uniform_real_distribution<double> U(0,1);
-    using from=counting_iterator<size_t>;
-    using to=counting_iterator<size_t>;
+    using from=rdmini::counting_iterator<size_t>;
+    using to=rdmini::counting_iterator<size_t>;
 
     size_t r=distribute_common(c,bin,weight);
     if (r==0) return;
 
     std::vector<size_t> remainder(r);
 
-    ResSampler S(r,weight.begin(),weight.end());
+    NSampler S(r,weight.begin(),weight.end());
     size_t s=S.sample(from(0),to(bin.size()),remainder.begin(),R);
 
     remainder.resize(s);
     for (auto i: remainder) ++bin[i];
 }
-
 
 // running stats
 
@@ -480,10 +467,13 @@ void run_test(const cl_args &A) {
             distribute_oss(count,R,bin,weight);
             break;
         case ADJPARETO:
-            distribute_reservoir<rdmini::adjusted_pareto_sampler>(count,R,bin,weight);
+            distribute_generic<rdmini::adjusted_pareto_sampler>(count,R,bin,weight);
             break;
         case EFRAIMIDIS:
-            distribute_reservoir<rdmini::efraimidis_spirakis_sampler>(count,R,bin,weight);
+            distribute_generic<rdmini::efraimidis_spirakis_sampler>(count,R,bin,weight);
+            break;
+        case CPSPREJ:
+            distribute_generic<rdmini::cps_multinomial_rejective>(count,R,bin,weight);
             break;
         default:
             throw fatal_error("unrecognized method");
