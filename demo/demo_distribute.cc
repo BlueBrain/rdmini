@@ -28,7 +28,8 @@ struct usage_error: fatal_error {
 
 const char *usage_text=
     "[OPTION]\n"
-    "  -m METHOD Method to use: steps, multinomial, adjpareto, efraimidis, oss\n"
+    "  -m METHOD Method to use: steps, multinomial, adjpareto, efraimidis, oss,\n"
+    "                           cpsprej\n"
     "  -c N      Count to distribute\n"
     "  -c N-M    Select counts uniformly in interval [N,M]\n"
     "  -b N      Distribute among N bins\n"
@@ -47,11 +48,12 @@ const char *usage_text=
     "  multinomial:    Multinomial with-replacement sampling\n"
     "  oss:            Ordered systematic sampling without replacement\n"
     "  adjpareto:      Adjusted Pareto reservoir sampling without replacement\n"
-    "  efraimidis:     Efraimidis and Spirakis reservoir sampling without replacement\n\n"
+    "  efraimidis:     Efraimidis and Spirakis reservoir sampling without replacement\n"
+    "  cpsprej:       Conditional Poisson sampler using Poisson rejective scheme\n\n"
     "Normalised results are scaled by inverse bin weight; weights are scaled so that\n"
     "the total weight is the number of bins.\n";
 
-enum method_enum { STEPS, MULTINOMIAL, OSS, ADJPARETO, EFRAIMIDIS, UNKNOWN_METHOD };
+enum method_enum { STEPS, MULTINOMIAL, OSS, ADJPARETO, EFRAIMIDIS, CPSPREJ, UNKNOWN_METHOD };
 enum weights_enum { CONSTANT, GEOMETRIC, LINEAR };
 
 struct cl_args {
@@ -76,6 +78,7 @@ std::pair<const char *,method_enum> method_tbl[]={
     {"oss", OSS},
     {"adjpareto", ADJPARETO},
     {"efraimidis", EFRAIMIDIS},
+    {"cpsprej", CPSPREJ},
     {0, UNKNOWN_METHOD}
 };
 
@@ -320,11 +323,14 @@ void distribute_oss(unsigned c, RNG &R,
     S.sample(bin.begin(),bin.end(),rdmini::functor_iterator([](unsigned &b) { ++b; }),R);
 }
 
-// input iterator that just counts up
+// random-access input iterator that just counts up
 template <typename int_type>
 struct counting_iterator {
-    typedef int_type value_type;
-    typedef const value_type &reference;
+    using difference_type=typename std::make_signed<int_type>::type;
+    using value_type=int_type;
+    using pointer=const value_type *;
+    using reference=value_type;
+    using iterator_category=std::random_access_iterator_tag;
 
     value_type i;
 
@@ -333,13 +339,44 @@ struct counting_iterator {
     bool operator==(counting_iterator x) const { return i==x.i; }
     bool operator!=(counting_iterator x) const { return i!=x.i; }
 
+    bool operator<=(counting_iterator x) const { return i<=x.i; }
+    bool operator>=(counting_iterator x) const { return i>=x.i; }
+
+    bool operator<(counting_iterator x) const { return i<x.i; }
+    bool operator>(counting_iterator x) const { return i>x.i; }
+
+    difference_type operator-(counting_iterator x) const {
+        return (difference_type)i-(difference_type)x.i;
+    }
+
+    counting_iterator &operator+=(difference_type n) { i+=n; return *this; }
+    counting_iterator operator+(difference_type n) const { return counting_iterator(i+n); }
+    friend counting_iterator operator+(difference_type n,counting_iterator x) {
+        return counting_iterator(x.i+n);
+    }
+
+    counting_iterator &operator-=(difference_type n) { i-=n; return *this; }
+    counting_iterator operator-(difference_type n) const { return counting_iterator(i-n); }
+    friend counting_iterator operator-(difference_type n,counting_iterator x) {
+        return counting_iterator(x.i-n);
+    }
+
+    reference operator[](difference_type n) const { return i+n; }
+
     reference operator*() const { return i; }
+
     counting_iterator &operator++() { return ++i,*this; }
-    counting_iterator operator++(int) { counting_iterator x(*this); return ++i,x; }
+    counting_iterator operator++(int) { counting_iterator x(i); return ++i,x; }
+
+    counting_iterator &operator--() { return --i,*this; }
+    counting_iterator operator--(int) { counting_iterator x(i); return --i,x; }
 };
 
-template <typename ResSampler,typename RNG>
-void distribute_reservoir(unsigned c, RNG &R,
+// Distribute using a rejection or reservoir sampler that
+// needs to overwrite the output.
+
+template <typename NSampler,typename RNG>
+void distribute_generic(unsigned c, RNG &R,
                       std::vector<unsigned> &bin,
                       std::vector<double> weight,
                       double total_weight = 0)
@@ -353,13 +390,12 @@ void distribute_reservoir(unsigned c, RNG &R,
 
     std::vector<size_t> remainder(r);
 
-    ResSampler S(r,weight.begin(),weight.end());
+    NSampler S(r,weight.begin(),weight.end());
     size_t s=S.sample(from(0),to(bin.size()),remainder.begin(),R);
 
     remainder.resize(s);
     for (auto i: remainder) ++bin[i];
 }
-
 
 // running stats
 
@@ -480,10 +516,13 @@ void run_test(const cl_args &A) {
             distribute_oss(count,R,bin,weight);
             break;
         case ADJPARETO:
-            distribute_reservoir<rdmini::adjusted_pareto_sampler>(count,R,bin,weight);
+            distribute_generic<rdmini::adjusted_pareto_sampler>(count,R,bin,weight);
             break;
         case EFRAIMIDIS:
-            distribute_reservoir<rdmini::efraimidis_spirakis_sampler>(count,R,bin,weight);
+            distribute_generic<rdmini::efraimidis_spirakis_sampler>(count,R,bin,weight);
+            break;
+        case CPSPREJ:
+            distribute_generic<rdmini::cps_poisson_rejective>(count,R,bin,weight);
             break;
         default:
             throw fatal_error("unrecognized method");
