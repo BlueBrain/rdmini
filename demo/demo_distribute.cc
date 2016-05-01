@@ -7,10 +7,9 @@
 #include <cstring>
 #include <cassert>
 
-#include "rdmini/categorical.h"
 #include "rdmini/sampler.h"
 #include "rdmini/timer.h"
-#include "rdmini/util/functor_iterator.h"
+#include "rdmini/util/iterator.h"
 
 using std::size_t;
 
@@ -267,6 +266,7 @@ void distribute_steps(unsigned c, Rng &R,
 
 // Distribute rounded-down values, return deficit and write residuals back
 // into weights.
+
 size_t distribute_common(unsigned c,std::vector<unsigned> &bin,
                          std::vector<double> &weight) {
     size_t N=bin.size();
@@ -322,55 +322,6 @@ void distribute_oss(unsigned c, RNG &R,
     rdmini::ordered_systematic_sampler S(weight.begin(),weight.end());
     S.sample(bin.begin(),bin.end(),rdmini::functor_iterator([](unsigned &b) { ++b; }),R);
 }
-
-// random-access input iterator that just counts up
-template <typename int_type>
-struct counting_iterator {
-    using difference_type=typename std::make_signed<int_type>::type;
-    using value_type=int_type;
-    using pointer=const value_type *;
-    using reference=value_type;
-    using iterator_category=std::random_access_iterator_tag;
-
-    value_type i;
-
-    explicit counting_iterator(int_type i_=0): i(i_) {}
-
-    bool operator==(counting_iterator x) const { return i==x.i; }
-    bool operator!=(counting_iterator x) const { return i!=x.i; }
-
-    bool operator<=(counting_iterator x) const { return i<=x.i; }
-    bool operator>=(counting_iterator x) const { return i>=x.i; }
-
-    bool operator<(counting_iterator x) const { return i<x.i; }
-    bool operator>(counting_iterator x) const { return i>x.i; }
-
-    difference_type operator-(counting_iterator x) const {
-        return (difference_type)i-(difference_type)x.i;
-    }
-
-    counting_iterator &operator+=(difference_type n) { i+=n; return *this; }
-    counting_iterator operator+(difference_type n) const { return counting_iterator(i+n); }
-    friend counting_iterator operator+(difference_type n,counting_iterator x) {
-        return counting_iterator(x.i+n);
-    }
-
-    counting_iterator &operator-=(difference_type n) { i-=n; return *this; }
-    counting_iterator operator-(difference_type n) const { return counting_iterator(i-n); }
-    friend counting_iterator operator-(difference_type n,counting_iterator x) {
-        return counting_iterator(x.i-n);
-    }
-
-    reference operator[](difference_type n) const { return i+n; }
-
-    reference operator*() const { return i; }
-
-    counting_iterator &operator++() { return ++i,*this; }
-    counting_iterator operator++(int) { counting_iterator x(i); return ++i,x; }
-
-    counting_iterator &operator--() { return --i,*this; }
-    counting_iterator operator--(int) { counting_iterator x(i); return --i,x; }
-};
 
 // Distribute using a rejection or reservoir sampler that
 // needs to overwrite the output.

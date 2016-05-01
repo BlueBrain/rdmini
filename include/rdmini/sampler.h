@@ -410,74 +410,104 @@ struct efraimidis_spirakis_sampler {
  */
 
 namespace impl {
+    // compute conditional poisson inclusion probabilities from non-conditional
+    // poisson inclusion probabilities.
+
+    template <typename real_type>
+    void conditional_psi(size_t n,const std::vector<real_type> pi,std::vector<real_type> &psi) {
+        size_t N=pi.size();
+        psi.assign(N,0);
+
+        for (size_t j=1; j<=n; ++j) {
+            real_type denom=0;
+            for (size_t i=0; i<N; ++i) {
+                psi[i]=pi[i]/(1-pi[i])*(1-psi[i]);
+                denom+=psi[i];
+            }
+            real_type scale=j/denom;
+            for (auto &x: psi) x*=scale;
+        }
+    }
+
     // invert inclusion probabilities in-place to the with-replacement Poisson probabilities
     template <typename real_type=double>
-    void invert_cps_probabilities(size_t n,std::vector<real_type> &pibar,
+    void invert_cps_probabilities(size_t n,std::vector<real_type> &pi,
                                   real_type abs_tol=2*std::numeric_limits<real_type>::epsilon()) {
-        auto N=pibar.size();
-
-        // normalize (under assumption that each pi < 1/n)
-        real_type s=n/std::accumulate(pibar.begin(),pibar.end(),real_type(0));
-        for (auto &p: pibar) p*=s;
+        auto N=pi.size();
 
         // quasi-Newton following Tillé §5.6.3
-        // (not guaranteed to converge all the way down, hence max_delta monitoring
-        // shenanigans below.)
+        // This is not guaranteed to converge! So we do a dodgy greedy line search
+        // on the q-N direction at each step.
 
-        std::vector<real_type> pi(pibar),psi(N);
+        std::vector<real_type> pibar(pi),pix(N),psi(N),delta(N);
 
-        real_type least_max_delta=std::numeric_limits<real_type>::max();
-        int conv_retries=3;
+        // adaptive step scaling parameters
+        double beta=0.2; // scale when admissible
+        double gamma=0.5; // scale when inadmissible
 
-        size_t j=0;
-        int retry=0;
-        do {
-            // compute psi(pibar,n)
-            std::fill(psi.begin(),psi.end(),real_type(0));
-            for (size_t j=1; j<=n; ++j) {
-                real_type denom=0;
-                for (size_t i=0; i<N; ++i) {
-                    psi[i]=pibar[i]/(1-pibar[i])*(1-psi[i]);
-                    denom+=psi[i];
-                }
-                real_type scale=j/denom;
-                for (auto &x: psi) x*=scale;
-            }
+        double alpha=1;
 
-            real_type max_delta=0;
-            for (size_t i=0; i<N; ++i) {
-                real_type delta=pi[i]-psi[i];
-                pibar[i]+=delta;
-
-                delta=std::abs(delta);
-                if (delta>max_delta) max_delta=delta;
-            }
-
-            if (max_delta<least_max_delta) {
-                least_max_delta=max_delta;
-                retry=0;
-            }
-            else ++retry;
-
-            //std::cerr << "round " << ++j << ": δ=" << max_delta << "\n";
+        // compute initial directional vector pi-psi(pibar,n)
+        conditional_psi(n,pibar,psi);
+        real_type dmax=0;
+        for (size_t i=0; i<N; ++i) {
+            delta[i]=pi[i]-psi[i];
+            dmax=std::max(dmax,std::abs(delta[i]));
         }
-        while (least_max_delta>abs_tol && retry<conv_retries);
 
+        while (dmax>abs_tol) {
+            double v=0;
 
-        //for (int i=0; i<N; ++i)
-         //   std::cerr << i << "\t" << pi[i] << "\t" << psi[i] << "\t" << pibar[i] << "\n";
+            // compute candidate pix = pibar + alpha*delta
+            for (size_t i=0; i<N; ++i) {
+                pix[i]=pibar[i]+alpha*delta[i];
+                if (pix[i]<0 || pix[i]>1) goto inadmissible;
+            }
 
+            // compute psi
+            conditional_psi(n,pix,psi);
+
+            // check deviation
+            for (size_t i=0; i<N; ++i)
+                v=std::max(v,std::abs(pi[i]-psi[i]));
+
+            if (v>=dmax) goto inadmissible;
+
+            // looks admissible! recompute delta
+            pibar=pix;
+
+            dmax=0;
+            for (size_t i=0; i<N; ++i) {
+                delta[i]=pi[i]-psi[i];
+                dmax=std::max(dmax,std::abs(delta[i]));
+            }
+
+            alpha=1-gamma*(1-alpha);
+            std::cerr << "* admissible: new alpha: " << alpha <<"\n";
+            std::cerr << "* admissible: new dmax: " << dmax <<"\n";
+            continue;
+
+        inadmissible:
+            // reduce alpha and try again
+            alpha*=beta;
+            std::cerr << "inadmissible: new alpha: " << alpha <<"\n";
+        }
+
+        for (int i=0; i<N; ++i)
+           std::cerr << i << "\t" << pi[i] << "\t" << psi[i] << "\t" << pibar[i] << "\n";
+
+        pi=pibar;
     }
 }
 
-struct cps_poisson_rejective {
+struct cps_multinomial_rejective {
     using size_type=std::size_t;
     using real_type=double;
 
-    cps_poisson_rejective() {}
+    cps_multinomial_rejective() {}
 
     template <typename Iter>
-    cps_poisson_rejective(size_type n_,Iter b,Iter e): P(n_,b,e) {}
+    cps_multinomial_rejective(size_type n_,Iter b,Iter e): P(n_,b,e) {}
 
     struct param_type {
         size_type n=0;
@@ -487,9 +517,18 @@ struct cps_poisson_rejective {
 
         template <typename Iter>
         param_type(size_type n_,Iter pi_begin,Iter pi_end): n(n_) {
-            //std::vector<real_type> pi(pi_begin,pi_end);
-            std::vector<real_type> pi={0.07,0.17,0.41,0.61,0.83,0.91};
+            std::vector<real_type> pi(pi_begin,pi_end);
+            //std::vector<real_type> pi={0.07,0.17,0.41,0.61,0.83,0.91};
             impl::invert_cps_probabilities(n,pi); //,1e-6);
+
+            // convert pi for unconditional Poisson to mu for multinomial on n
+            double sum=0;
+            for (auto &x: pi) {
+                x=x/(1-x);
+                sum+=x;
+            }
+            real_type scale=n/sum;
+            for (auto &x: pi) x*=scale;
 
             C=categorical_distribution<size_type,real_type>(pi.begin(),pi.end());
         }
@@ -533,6 +572,7 @@ struct cps_poisson_rejective {
                 w=o;
                 i=0;
                 ++rejects;
+                std::cerr << "reject" << rejects << ": " << k << " drawn twice\n";
             }
             else {
                 drawn[k]=true;
@@ -540,7 +580,6 @@ struct cps_poisson_rejective {
                 ++i;
             }
         }
-        //std::cerr << "rejects: " << rejects << "\n";
 
         return P.n;
     }
