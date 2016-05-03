@@ -28,7 +28,7 @@ struct usage_error: fatal_error {
 const char *usage_text=
     "[OPTION]\n"
     "  -m METHOD Method to use: steps, multinomial, adjpareto, efraimidis, oss,\n"
-    "                           cpsprej\n"
+    "                           cpsrej\n"
     "  -c N      Count to distribute\n"
     "  -c N-M    Select counts uniformly in interval [N,M]\n"
     "  -b N      Distribute among N bins\n"
@@ -48,11 +48,11 @@ const char *usage_text=
     "  oss:            Ordered systematic sampling without replacement\n"
     "  adjpareto:      Adjusted Pareto reservoir sampling without replacement\n"
     "  efraimidis:     Efraimidis and Spirakis reservoir sampling without replacement\n"
-    "  cpsprej:       Conditional Poisson sampler using Poisson rejective scheme\n\n"
+    "  cpsrej:         Conditional Poisson sampler using Poisson rejective scheme\n\n"
     "Normalised results are scaled by inverse bin weight; weights are scaled so that\n"
     "the total weight is the number of bins.\n";
 
-enum method_enum { STEPS, MULTINOMIAL, OSS, ADJPARETO, EFRAIMIDIS, CPSPREJ, UNKNOWN_METHOD };
+enum method_enum { STEPS, MULTINOMIAL, OSS, ADJPARETO, EFRAIMIDIS, CPSREJ, UNKNOWN_METHOD };
 enum weights_enum { CONSTANT, GEOMETRIC, LINEAR };
 
 struct cl_args {
@@ -77,7 +77,7 @@ std::pair<const char *,method_enum> method_tbl[]={
     {"oss", OSS},
     {"adjpareto", ADJPARETO},
     {"efraimidis", EFRAIMIDIS},
-    {"cpsprej", CPSPREJ},
+    {"cpsrej", CPSREJ},
     {0, UNKNOWN_METHOD}
 };
 
@@ -472,8 +472,8 @@ void run_test(const cl_args &A) {
         case EFRAIMIDIS:
             distribute_generic<rdmini::efraimidis_spirakis_sampler>(count,R,bin,weight);
             break;
-        case CPSPREJ:
-            distribute_generic<rdmini::cps_multinomial_rejective>(count,R,bin,weight);
+        case CPSREJ:
+            distribute_generic<rdmini::cps_poisson_rejective>(count,R,bin,weight);
             break;
         default:
             throw fatal_error("unrecognized method");

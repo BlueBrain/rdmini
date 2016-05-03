@@ -444,7 +444,7 @@ void run_test(const cl_args &A) {
             break;
         case CPSREJ:
             {
-                rdmini::cps_multinomial_rejective S(A.c,A.mu.begin(),A.mu.end(),1e-7);
+                rdmini::cps_poisson_rejective S(A.c,A.mu.begin(),A.mu.end(),1e-7);
                 sample=sample_rr(N,S,R);
             }
             break;

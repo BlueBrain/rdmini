@@ -441,7 +441,7 @@ namespace impl {
         auto N=pi.size();
 
         // quasi-Newton following Tillé §5.6.3
-        // This is not guaranteed to converge! So we'll try a greedy line search
+        // This does not always converge! So we'll try a greedy line search
         // on the q-N direction at each step. This still won't necessarily converge,
         // but it is more robust than the original algorithm.
 
@@ -583,6 +583,82 @@ struct cps_multinomial_rejective {
             }
         }
 
+        return P.n;
+    }
+};
+
+struct cps_poisson_rejective {
+    using size_type=std::size_t;
+    using real_type=double;
+
+    static constexpr real_type default_tolerance=4*std::numeric_limits<real_type>::epsilon();
+
+    cps_poisson_rejective() {}
+
+    template <typename Iter>
+    cps_poisson_rejective(size_type n_,Iter b,Iter e,double abs_tol=default_tolerance): P(n_,b,e,abs_tol) {}
+
+    struct param_type {
+        size_type n=0;
+        std::vector<real_type> pi;
+
+        param_type() {}
+
+        template <typename Iter>
+        param_type(size_type n_,Iter pi_begin,Iter pi_end,double abs_tol): n(n_), pi(pi_begin,pi_end) {
+            impl::invert_cps_probabilities(n,pi,abs_tol);
+        }
+
+        size_type size() const { return pi.size(); }
+    } P;
+
+    void param(const param_type &P_) { P=P_; }
+    param_type param() const { return P; }
+
+    void reset() {} // nop
+
+    size_type min() const { return P.n; }
+    size_type max() const { return P.n; }
+    size_type size() const { return P.size(); }
+
+    // InIter must be a forward input iterator
+    // OutIter must be a forward output iterator
+    template <typename InIter,typename OutIter,typename Rng>
+    size_type sample(InIter b,InIter e,OutIter o,Rng &g) {
+        std::uniform_real_distribution<real_type> U(0,1);
+        size_t N=P.size();
+        size_t popN=b<e?size_type(std::distance(b,e)):0;
+        if (popN<N) throw std::invalid_argument("population too small");
+
+        if (popN<P.n) {
+            std::copy(b,e,o);
+            return popN;
+        }
+        
+        // Select each item from population with probability pi[i];
+        // restart if we do not get P.n items.
+
+        for (;;) {
+            InIter r=b;  // reset read and write iterators
+            OutIter w=o;
+            size_t n_out=0;
+            
+            for (size_type i=0; i<N; ++i) {
+                if (U(g)<P.pi[i]) {
+                    if (n_out<P.n) {
+                        *w++=*r;
+                        ++n_out;
+                    }
+                    else goto retry;
+                }
+                ++r;
+            }
+
+            if (n_out==P.n) break;
+
+        retry: ;
+        }
+            
         return P.n;
     }
 };
