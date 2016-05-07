@@ -114,7 +114,7 @@ std::vector<T> parse_csv_option(const std::string &s) {
         ss >> comma;
         if (comma!=',' && !ss.eof()) throw usage_error(error_string);
 
-        values.push_back(std::stod(s));
+        values.push_back(x);
     }
     if (!ss.eof()) throw usage_error(error_string);
 
@@ -124,7 +124,7 @@ std::vector<T> parse_csv_option(const std::string &s) {
 cl_args parse_cl_args(int argc,char **argv) {
     cl_args A;
 
-    enum parse_state_enum { no_opt, opt_c, opt_N, opt_g, opt_l, opt_p, opt_n, opt_d, opt_o }
+    enum parse_state_enum { no_opt, opt_c, opt_N, opt_g, opt_l, opt_m, opt_n, opt_d, opt_o }
         parse_state = no_opt;
 
     int i=0;
@@ -147,7 +147,7 @@ cl_args parse_cl_args(int argc,char **argv) {
                 case 'N': parse_state=opt_N; break;
                 case 'g': parse_state=opt_g; break;
                 case 'l': parse_state=opt_l; break;
-                case 'p': parse_state=opt_n; break;
+                case 'm': parse_state=opt_m; break;
                 case 'n': parse_state=opt_n; break;
                 case 'd': parse_state=opt_d; break;
                 case 'o': parse_state=opt_o; break;
@@ -181,7 +181,7 @@ cl_args parse_cl_args(int argc,char **argv) {
             A.trials=std::stoi(arg);
             parse_state=no_opt;
             break;
-        case opt_p:
+        case opt_m:
             A.mu=parse_csv_option<double>(arg);
             A.mu_spec=EXPLICIT;
             parse_state=no_opt;
@@ -254,8 +254,9 @@ cl_args parse_cl_args(int argc,char **argv) {
             double min_ratio=1,max_ratio=1;
             switch (A.mu_spec) {
             case LINEAR:
-                min_ratio=2.0*A.c/(A.N-1.0);
+                min_ratio=(2.0*A.c)/A.N-1;
                 max_ratio=1/min_ratio;
+                if (min_ratio>max_ratio) std::swap(min_ratio,max_ratio);
                 break;
             case GEOMETRIC:
                 // Okay, this is a bit hairy. We do Newton a few times
@@ -441,7 +442,7 @@ void run_test(const cl_args &A) {
             break;
         case CPSREJ:
             {
-                rdmini::cps_multinomial_rejective S(A.c,A.mu.begin(),A.mu.end());
+                rdmini::cps_poisson_rejective S(A.c,A.mu.begin(),A.mu.end(),1e-7);
                 sample=sample_rr(N,S,R);
             }
             break;

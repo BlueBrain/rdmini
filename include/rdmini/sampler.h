@@ -424,28 +424,33 @@ namespace impl {
                 psi[i]=pi[i]/(1-pi[i])*(1-psi[i]);
                 denom+=psi[i];
             }
+
             real_type scale=j/denom;
-            for (auto &x: psi) x*=scale;
+            for (auto &x: psi) {
+                x*=scale;
+                if (x>1) throw std::runtime_error("cps forward inclusion probability calculation diverged");
+            }
         }
     }
 
+    
     // invert inclusion probabilities in-place to the with-replacement Poisson probabilities
     template <typename real_type=double>
     void invert_cps_probabilities(size_t n,std::vector<real_type> &pi,
-                                  real_type abs_tol=2*std::numeric_limits<real_type>::epsilon()) {
+                                  real_type abs_tol) {
         auto N=pi.size();
 
         // quasi-Newton following Tillé §5.6.3
-        // This is not guaranteed to converge! So we do a dodgy greedy line search
-        // on the q-N direction at each step.
+        // This does not always converge! So we'll try a greedy line search
+        // on the q-N direction at each step. This still won't necessarily converge,
+        // but it is more robust than the original algorithm.
 
         std::vector<real_type> pibar(pi),pix(N),psi(N),delta(N);
 
         // adaptive step scaling parameters
-        double beta=0.2; // scale when admissible
-        double gamma=0.5; // scale when inadmissible
-
-        double alpha=1;
+        double alpha=1;   // step scale
+        double beta=0.2;  // scale towards one when admissible
+        double gamma=0.1; // scale towards zero when inadmissible
 
         // compute initial directional vector pi-psi(pibar,n)
         conditional_psi(n,pibar,psi);
@@ -479,22 +484,19 @@ namespace impl {
             dmax=0;
             for (size_t i=0; i<N; ++i) {
                 delta[i]=pi[i]-psi[i];
+
                 dmax=std::max(dmax,std::abs(delta[i]));
             }
 
-            alpha=1-gamma*(1-alpha);
-            std::cerr << "* admissible: new alpha: " << alpha <<"\n";
-            std::cerr << "* admissible: new dmax: " << dmax <<"\n";
+            alpha=1-(1-beta)*(1-alpha);
             continue;
 
         inadmissible:
             // reduce alpha and try again
-            alpha*=beta;
-            std::cerr << "inadmissible: new alpha: " << alpha <<"\n";
+            alpha*=gamma;
+            if (alpha<abs_tol)
+                throw std::runtime_error("cps pi inversion failed to converge, with delta "+std::to_string(dmax));
         }
-
-        for (int i=0; i<N; ++i)
-           std::cerr << i << "\t" << pi[i] << "\t" << psi[i] << "\t" << pibar[i] << "\n";
 
         pi=pibar;
     }
@@ -504,10 +506,12 @@ struct cps_multinomial_rejective {
     using size_type=std::size_t;
     using real_type=double;
 
+    static constexpr real_type default_tolerance=4*std::numeric_limits<real_type>::epsilon();
+
     cps_multinomial_rejective() {}
 
     template <typename Iter>
-    cps_multinomial_rejective(size_type n_,Iter b,Iter e): P(n_,b,e) {}
+    cps_multinomial_rejective(size_type n_,Iter b,Iter e,double abs_tol=default_tolerance): P(n_,b,e,abs_tol) {}
 
     struct param_type {
         size_type n=0;
@@ -516,10 +520,9 @@ struct cps_multinomial_rejective {
         param_type() {}
 
         template <typename Iter>
-        param_type(size_type n_,Iter pi_begin,Iter pi_end): n(n_) {
+        param_type(size_type n_,Iter pi_begin,Iter pi_end,double abs_tol): n(n_) {
             std::vector<real_type> pi(pi_begin,pi_end);
-            //std::vector<real_type> pi={0.07,0.17,0.41,0.61,0.83,0.91};
-            impl::invert_cps_probabilities(n,pi); //,1e-6);
+            impl::invert_cps_probabilities(n,pi,abs_tol);
 
             // convert pi for unconditional Poisson to mu for multinomial on n
             double sum=0;
@@ -572,7 +575,6 @@ struct cps_multinomial_rejective {
                 w=o;
                 i=0;
                 ++rejects;
-                std::cerr << "reject" << rejects << ": " << k << " drawn twice\n";
             }
             else {
                 drawn[k]=true;
@@ -581,6 +583,82 @@ struct cps_multinomial_rejective {
             }
         }
 
+        return P.n;
+    }
+};
+
+struct cps_poisson_rejective {
+    using size_type=std::size_t;
+    using real_type=double;
+
+    static constexpr real_type default_tolerance=4*std::numeric_limits<real_type>::epsilon();
+
+    cps_poisson_rejective() {}
+
+    template <typename Iter>
+    cps_poisson_rejective(size_type n_,Iter b,Iter e,double abs_tol=default_tolerance): P(n_,b,e,abs_tol) {}
+
+    struct param_type {
+        size_type n=0;
+        std::vector<real_type> pi;
+
+        param_type() {}
+
+        template <typename Iter>
+        param_type(size_type n_,Iter pi_begin,Iter pi_end,double abs_tol): n(n_), pi(pi_begin,pi_end) {
+            impl::invert_cps_probabilities(n,pi,abs_tol);
+        }
+
+        size_type size() const { return pi.size(); }
+    } P;
+
+    void param(const param_type &P_) { P=P_; }
+    param_type param() const { return P; }
+
+    void reset() {} // nop
+
+    size_type min() const { return P.n; }
+    size_type max() const { return P.n; }
+    size_type size() const { return P.size(); }
+
+    // InIter must be a forward input iterator
+    // OutIter must be a forward output iterator
+    template <typename InIter,typename OutIter,typename Rng>
+    size_type sample(InIter b,InIter e,OutIter o,Rng &g) {
+        std::uniform_real_distribution<real_type> U(0,1);
+        size_t N=P.size();
+        size_t popN=b<e?size_type(std::distance(b,e)):0;
+        if (popN<N) throw std::invalid_argument("population too small");
+
+        if (popN<P.n) {
+            std::copy(b,e,o);
+            return popN;
+        }
+        
+        // Select each item from population with probability pi[i];
+        // restart if we do not get P.n items.
+
+        for (;;) {
+            InIter r=b;  // reset read and write iterators
+            OutIter w=o;
+            size_t n_out=0;
+            
+            for (size_type i=0; i<N; ++i) {
+                if (U(g)<P.pi[i]) {
+                    if (n_out<P.n) {
+                        *w++=*r;
+                        ++n_out;
+                    }
+                    else goto retry;
+                }
+                ++r;
+            }
+
+            if (n_out==P.n) break;
+
+        retry: ;
+        }
+            
         return P.n;
     }
 };
