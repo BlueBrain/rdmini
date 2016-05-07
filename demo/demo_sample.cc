@@ -1,4 +1,23 @@
-/** Demo sampler implementations */
+/** Demo sampler implementations
+ *
+ * This demo code exercises the samplers defined
+ * in rdmini/sampler.h
+ *
+ * Command line arguments specify the sample (-c) and
+ * population (-N) sizes. The weights for each member
+ * of the population are by default uniform, but can
+ * be set to be distributed linearly (-l) or geometrically
+ * (-g) across the population.
+ *
+ * The expectation values can also be explicitly given
+ * with the -m option; these are the mean values for
+ * the number of times an element will occur in a sample,
+ * and for without-replacement samplers, this is the
+ * same as the inclusion probability.
+ *
+ * Results are given in CSV form; the format and content
+ * depends on the -o option.
+ */
 
 #include <stdexcept>
 #include <cmath>
@@ -205,7 +224,9 @@ cl_args parse_cl_args(int argc,char **argv) {
     if (A.sampler==UNKNOWN_SAMPLER)
         throw usage_error("missing sampler argument");
 
-    // compute expectations mu according to options.
+    // Compute expectations mu for each member of the population as
+    // specified by the -m, -g or -l options above.
+    
     switch (A.mu_spec) {
     case CONSTANT:
         A.mu.assign(A.N,(double)A.c/A.N);
@@ -213,13 +234,20 @@ cl_args parse_cl_args(int argc,char **argv) {
     case EXPLICIT:
         A.mu.resize(A.N);
         { 
+            // Rescale the given expectations so as to ensure they
+            // sum to the sample size.
+
             double scale=A.c/std::accumulate(A.mu.begin(),A.mu.end(),0.0);
             for (auto &mu: A.mu) mu*=scale;
         }
         break;
     case LINEAR:
         A.mu.resize(A.N);
-        if (A.N>1) {
+        if (A.N>1)
+        {
+            // µ[i] is linear in i and scaled so that Σμ = n (sample size)
+            // and so that μ[N-1]/μ[0] is the specified ratio.
+
             double a=2.0/(A.N-1)*(A.ratio-1)/(A.ratio+1);
             for (size_t i=0; i<A.N; ++i) 
                 A.mu[i]=(1+a*(i-(A.N-1)*0.5))*A.c/(double)A.N;
@@ -228,7 +256,11 @@ cl_args parse_cl_args(int argc,char **argv) {
         break;
     case GEOMETRIC:
         A.mu.resize(A.N);
-        if (A.N>1) {
+        if (A.N>1)
+        {
+            // µ[i+1] = α·μ[i] for some constant α such that Σμ = n (sample size)
+            // and that μ[N-1]/μ[0] is the specified ratio.
+
             A.mu.resize(A.N);
             double a=std::pow(A.ratio,1.0/(A.N-1));
             A.mu[0]=A.c*(a-1)/(std::pow(a,A.N)-1);
@@ -240,7 +272,12 @@ cl_args parse_cl_args(int argc,char **argv) {
         throw usage_error("error in parsing mu specification");
     }
 
-    // check mu for out-of-range values
+    // Check μ for out-of-range values: for without-replacement samplers,
+    // µ must be between zero and one; for with-replacement samplers,
+    // µ must be non-negative.
+    //
+    // If the ratio has been set such that µ is not admissible, report
+    // the valid range for the ratio.
     
     for (auto mu: A.mu) 
         if (mu<0) throw usage_error("negative expectation specified");
@@ -266,7 +303,6 @@ cl_args parse_cl_args(int argc,char **argv) {
                     double N=A.N;
                     double x=2*std::pow(n/(n-1)*(N-1)/N,N-1);
                     double a=std::pow(x,1/(N-1));
-                    std::cout << "x=" << x << "; a=" << a << "\n";
                     for (int i=0; i<5; ++i) {
                         x-=((n-1)*x*a-n*x+1)/(N*(n-1)/(N-1)*a-n);
                         a=std::pow(x,1/(N-1));
@@ -343,8 +379,6 @@ std::vector<unsigned> sample_rr(unsigned N,RSampler &S,RNG &R)
     return sample;
 }
 
-// running stats
-
 struct running_mean {
     running_mean() { clear(); }
 
@@ -361,14 +395,22 @@ struct running_mean {
     double m;
 };
 
-
-// harness
+// Actual sampler harness:
+//
+// 1. Print output headers
+// 2. Compute theoretical inclusion probabilities π if required
+//    for reporting.
+// 3. Run the sampler the specified number of trials, collecting
+//    mean values for each member of the population.
+// 4. Report collected statistics.
 
 void run_test(const cl_args &A) {
     std::mt19937_64 R(A.seed);
     unsigned N=A.N;
 
-    // print header and initialise stats vectors
+    // means: empirical mean count across samples
+    // means2: empirical second-order counts across samples
+
     std::vector<running_mean> means,means2;
 
     switch (A.stats) {
@@ -396,6 +438,7 @@ void run_test(const cl_args &A) {
 
     // Compute model pi for with-replacement samplers
     // (currently only multinomial!)
+
     std::vector<double> model_pi;
     if (!sampler_is_wr(A.sampler))
         model_pi=A.mu;

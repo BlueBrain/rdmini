@@ -1,4 +1,25 @@
-/** Test various distribution procedures */
+/** Test various distribution procedures
+ *
+ * The distribution problem consists of how to allocate
+ * a possibly franctional quantity x across bins b[i]
+ * with sizes w[i] such that the value b[i] is an integer,
+ * and the expected value of the weighted total
+ * E[Σ b[i]·w[i]] = x, and the expected value of the
+ * weighted quantity in each bin E[b[i]·w[i]] = x/Σw[i].
+ *
+ * It is desirable that the distribution be as 'flat as
+ * possible', in that deviation from the fractional
+ * value is minimized. Further, it is desirable that
+ * there is little correlation in this deviation:
+ * one bin having above the mean in a given distribution
+ * should minimally affect the chance of any other bin
+ * being above or below the mean.
+ *
+ * This code compares the implementation taken from STEPS
+ * (HBP) 0.9.1 with a process that rounds down the allocation
+ * to each bin and then distributes the remainder according
+ * to a weighted sampling process.
+ */
 
 #include <stdexcept>
 #include <cmath>
@@ -285,8 +306,6 @@ size_t distribute_common(unsigned c,std::vector<unsigned> &bin,
         bin[i]=a;
         weight[i]=q-(double)a;
 
-        //std::cerr << "pi[" << i << "]=" << weight[i] << "\n";
-
         asum+=a;
     }
     assert(asum<=c);
@@ -348,7 +367,7 @@ void distribute_generic(unsigned c, RNG &R,
     for (auto i: remainder) ++bin[i];
 }
 
-// running stats
+// Running statistics: mean, variance, extrema.
 
 struct running_stats {
     running_stats() { clear(); }
@@ -408,7 +427,14 @@ struct running_cov {
     double mx,my,cn;
 };
 
-// harness
+// Distribution harness:
+//
+// 1. Print output headers for raw output
+// 2. Allocate the bin weights according to the constant,
+//    linear, or geometric scheme given on the command line.
+// 3. Run the distribution the number of trials, collecting
+//    statistics.
+// 4. Report results in CSV.
 
 void run_test(const cl_args &A) {
     std::mt19937_64 R(A.seed);
@@ -443,8 +469,8 @@ void run_test(const cl_args &A) {
 
     std::vector<unsigned> bin(A.b,0);
 
-    std::vector<running_stats> stats;
-    std::vector<running_cov> cov;
+    std::vector<running_stats> stats; // track mean and cv
+    std::vector<running_cov> cov;     // track covariances
     if (A.summary) {
         stats.resize(A.b);
         if (A.covariances) cov.resize((A.b*(A.b-1))/2);
