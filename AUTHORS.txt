@@ -1,0 +1,6 @@
+Aleksandr Ovcharenko
+Fabien Delalondre
+Francesco Casalegno
+Jan Deca
+Sam Yates
+Timothee Ewart (maintainer)

@@ -55,3 +55,10 @@ and report the results in a CSV format suitable for further
 analysis or processing. The `demo/models.yaml` file contains
 a number of demonstration models for use with the `rdmini`
 code; refer to `doc/demo_models.md` for details.
+
+## Funding
+
+The development of this software was supported by funding to the Blue Brain Project, a research center of the École polytechnique fédérale de Lausanne (EPFL), from the Swiss government’s ETH Board of the Swiss Federal Institutes of Technology.
+
+Copyright (c) 2015-2021 Blue Brain Project/EPFL
+
